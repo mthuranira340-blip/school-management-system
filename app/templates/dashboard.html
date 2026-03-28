@@ -209,6 +209,25 @@
     <article class="glass-card">
         <div class="section-head">
             <div>
+                <p class="eyebrow mb-1">Health</p>
+                <h4 class="mb-0">Term treatment status</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for item in health_records %}
+            <div class="message-card">
+                <strong>{{ item.term }} {{ item.academic_year }}</strong>
+                <small>Treated for: {{ item.treatment }}</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No health records for this student yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
                 <p class="eyebrow mb-1">Notifications</p>
                 <h4 class="mb-0">Inbox Preview</h4>
             </div>
@@ -224,6 +243,50 @@
             {% endfor %}
         </div>
     </article>
+
+    {% if current_user.role in ['admin', 'teacher'] %}
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Parent Insight</p>
+                <h4 class="mb-0">Recent comments</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for item in recent_comments %}
+            <div class="message-card">
+                <strong>{{ item.category }}</strong>
+                <small>{{ item.parent.full_name }}{% if item.student %} | {{ item.student.full_name }}{% endif %}</small>
+                <small>{{ item.comment }}</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No parent comments yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+    {% endif %}
+
+    {% if current_user.role in ['admin', 'teacher', 'finance'] %}
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Finance Flow</p>
+                <h4 class="mb-0">Latest reports</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for report in finance_reports %}
+            <div class="message-card">
+                <strong>{{ report.title }}</strong>
+                <small>{{ report.term }} {{ report.academic_year }} | KES {{ "%.2f"|format(report.amount_collected) }}</small>
+                <small>{% if report.teacher_shared %}Shared to teachers{% else %}Awaiting principal review{% endif %}</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No finance reports yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+    {% endif %}
 
     <article class="glass-card wide-card">
         <div class="section-head">

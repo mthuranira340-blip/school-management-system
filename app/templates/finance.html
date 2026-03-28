@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block page_title %}Finance{% endblock %}
+{% block content %}
+{% if mode == "finance" %}
+<section class="glass-card">
+    <p class="eyebrow">Finance Desk</p>
+    <h3>Submit report to principal</h3>
+    <form method="POST" novalidate class="form-stack">
+        {{ form.hidden_tag() }}
+        <div class="form-grid">
+            <div>{{ form.term.label(class="form-label") }}{{ form.term(class="form-select") }}</div>
+            <div>{{ form.academic_year.label(class="form-label") }}{{ form.academic_year(class="form-control") }}</div>
+            <div>{{ form.title.label(class="form-label") }}{{ form.title(class="form-control") }}</div>
+            <div>{{ form.amount_collected.label(class="form-label") }}{{ form.amount_collected(class="form-control") }}</div>
+            <div>{{ form.expected_amount.label(class="form-label") }}{{ form.expected_amount(class="form-control") }}</div>
+        </div>
+        <div>{{ form.report_body.label(class="form-label") }}{{ form.report_body(class="form-control", rows="5") }}</div>
+        {{ form.submit(class="btn btn-primary") }}
+    </form>
+</section>
+{% endif %}
+
+<section class="glass-card {% if mode == 'finance' %}mt-4{% endif %}">
+    <p class="eyebrow">Finance Reports</p>
+    <h3>
+        {% if mode == "admin" %}
+        Principal review and distribution
+        {% elif mode == "teacher" %}
+        Reports shared by principal
+        {% else %}
+        Submitted reports
+        {% endif %}
+    </h3>
+    <div class="table-responsive">
+        <table class="table align-middle">
+            <thead>
+                <tr>
+                    <th>Title</th>
+                    <th>Term</th>
+                    <th>Collected</th>
+                    <th>Expected</th>
+                    <th>Status</th>
+                    {% if mode == "admin" %}<th>Action</th>{% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for report in reports %}
+                <tr>
+                    <td>{{ report.title }}</td>
+                    <td>{{ report.term }} {{ report.academic_year }}</td>
+                    <td>KES {{ "%.2f"|format(report.amount_collected) }}</td>
+                    <td>KES {{ "%.2f"|format(report.expected_amount) }}</td>
+                    <td>{% if report.teacher_shared %}Shared to teachers{% else %}Pending principal action{% endif %}</td>
+                    {% if mode == "admin" %}
+                    <td>
+                        {% if not report.teacher_shared %}
+                        <a href="{{ url_for('main.finance', action='share', report_id=report.id) }}" class="btn btn-sm btn-outline-dark">Pass to teachers</a>
+                        {% else %}
+                        <span class="muted">Completed</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                <tr>
+                    <td colspan="{% if mode == 'admin' %}6{% else %}5{% endif %}">{{ report.report_body }}</td>
+                </tr>
+                {% else %}
+                <tr><td colspan="{% if mode == 'admin' %}6{% else %}5{% endif %}">No finance reports available.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+{% endblock %}

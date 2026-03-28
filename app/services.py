@@ -5,7 +5,7 @@ from decimal import Decimal
 from sqlalchemy import inspect, text
 
 from .extensions import db
-from .models import Achievement, Activity, FeePayment, FeeStructure, Message, ParentStudentLink, Result, Student, Subject, User
+from .models import Achievement, Activity, FeePayment, FeeStructure, FinanceReport, HealthRecord, Message, ParentComment, ParentStudentLink, Result, Student, Subject, User
 
 
 GRADE_RULES = [
@@ -155,12 +155,72 @@ def ensure_schema_updates():
             students = Student.query.all()
             for student in students:
                 student.portal_student_id = generate_student_portal_id(student.admission_number)
+        else:
+            students = Student.query.filter(
+                (Student.portal_student_id.is_(None)) | (Student.portal_student_id == "")
+            ).all()
+            for student in students:
+                student.portal_student_id = generate_student_portal_id(student.admission_number)
 
     db.session.commit()
 
 
 def seed_demo_data():
     if User.query.first():
+        finance = User.query.filter_by(role="finance").first()
+        if not finance:
+            finance = User(
+                full_name="Finance Office",
+                username="finance",
+                email="finance@demo.local",
+                school_email=generate_school_email("finance"),
+                role="finance",
+            )
+            finance.set_password("finance123")
+            db.session.add(finance)
+            db.session.flush()
+
+        student = Student.query.order_by(Student.id.asc()).first()
+        parent = User.query.filter_by(role="parent").order_by(User.id.asc()).first()
+        teacher = User.query.filter_by(role="teacher").order_by(User.id.asc()).first()
+
+        if student and teacher and not HealthRecord.query.filter_by(student_id=student.id).first():
+            db.session.add(
+                HealthRecord(
+                    student_id=student.id,
+                    term="Term 1",
+                    academic_year="2026",
+                    treatment="Typhoid vaccination",
+                    notes="Follow-up review completed and student cleared for classes.",
+                    recorded_by_id=teacher.id,
+                )
+            )
+
+        if student and parent and not ParentComment.query.filter_by(parent_id=parent.id).first():
+            db.session.add(
+                ParentComment(
+                    parent_id=parent.id,
+                    student_id=student.id,
+                    category="Performance",
+                    comment="Amina has improved well in Mathematics. Please keep the revision support sessions active.",
+                )
+            )
+
+        if finance and not FinanceReport.query.filter_by(submitted_by_id=finance.id).first():
+            db.session.add(
+                FinanceReport(
+                    submitted_by_id=finance.id,
+                    term="Term 1",
+                    academic_year="2026",
+                    title="Fee Collection Progress",
+                    amount_collected=Decimal("1200000.00"),
+                    expected_amount=Decimal("1500000.00"),
+                    report_body="Collection is at 80 percent. Priority follow-up is ongoing for balances over 30 days.",
+                    teacher_shared=False,
+                )
+            )
+
+        db.session.commit()
         return
 
     admin = User(
@@ -181,6 +241,15 @@ def seed_demo_data():
     )
     teacher.set_password("teacher123")
 
+    finance = User(
+        full_name="Finance Office",
+        username="finance",
+        email="finance@demo.local",
+        school_email=generate_school_email("finance"),
+        role="finance",
+    )
+    finance.set_password("finance123")
+
     parent = User(
         full_name="Sarah Njeri",
         username="parent",
@@ -192,7 +261,7 @@ def seed_demo_data():
     )
     parent.set_password("parent123")
 
-    db.session.add_all([admin, teacher, parent])
+    db.session.add_all([admin, teacher, parent, finance])
     db.session.flush()
 
     student = Student(
@@ -268,6 +337,39 @@ def seed_demo_data():
             Message(sender_id=teacher.id, receiver_id=parent.id, student_id=student.id, category="Co-Curricular", subject="Football training camp", body="Amina has been selected for the Saturday morning football training camp."),
             Message(sender_id=teacher.id, receiver_id=parent.id, student_id=student.id, category="Academic", subject="Mid-term performance update", body="Amina is showing strong progress in Mathematics and Biology. Please encourage revision in History."),
         ]
+    )
+
+    db.session.add(
+        HealthRecord(
+            student_id=student.id,
+            term="Term 1",
+            academic_year="2026",
+            treatment="Typhoid vaccination",
+            notes="Follow-up review completed and student cleared for classes.",
+            recorded_by_id=teacher.id,
+        )
+    )
+
+    db.session.add(
+        ParentComment(
+            parent_id=parent.id,
+            student_id=student.id,
+            category="Performance",
+            comment="Amina has improved well in Mathematics. Please keep the revision support sessions active.",
+        )
+    )
+
+    db.session.add(
+        FinanceReport(
+            submitted_by_id=finance.id,
+            term="Term 1",
+            academic_year="2026",
+            title="Fee Collection Progress",
+            amount_collected=Decimal("1200000.00"),
+            expected_amount=Decimal("1500000.00"),
+            report_body="Collection is at 80 percent. Priority follow-up is ongoing for balances over 30 days.",
+            teacher_shared=False,
+        )
     )
 
     db.session.commit()

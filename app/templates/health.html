@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block page_title %}Health{% endblock %}
+{% block content %}
+<section class="two-column">
+    <article class="glass-card">
+        <p class="eyebrow">Health Status</p>
+        <h3>Record treatment within term</h3>
+        <form method="POST" novalidate class="form-stack">
+            {{ form.hidden_tag() }}
+            <div class="form-grid">
+                <div>{{ form.student_id.label(class="form-label") }}{{ form.student_id(class="form-select") }}</div>
+                <div>{{ form.term.label(class="form-label") }}{{ form.term(class="form-select") }}</div>
+                <div>{{ form.academic_year.label(class="form-label") }}{{ form.academic_year(class="form-control") }}</div>
+                <div>{{ form.treatment.label(class="form-label") }}{{ form.treatment(class="form-control", placeholder="Deworming, Vaccination, Flu treatment...") }}</div>
+            </div>
+            <div>{{ form.notes.label(class="form-label") }}{{ form.notes(class="form-control", rows="4") }}</div>
+            {{ form.submit(class="btn btn-primary") }}
+        </form>
+    </article>
+
+    <article class="glass-card">
+        <p class="eyebrow">Recent Records</p>
+        <h3>Term treatment log</h3>
+        <div class="mini-list">
+            {% for item in records %}
+            <div class="message-card">
+                <strong>{{ item.student.full_name }} | {{ item.term }} {{ item.academic_year }}</strong>
+                <small>Treatment: {{ item.treatment }}</small>
+                <small>{{ item.notes or "No additional notes." }}</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No health records yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

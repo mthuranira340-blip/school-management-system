@@ -23,8 +23,16 @@
                 <nav class="nav-stack mt-4">
                     <a href="{{ url_for('main.dashboard') }}" class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}">Overview</a>
                     {% if current_user.role in ['admin', 'teacher'] %}
+                    <a href="{{ url_for('main.admissions') }}" class="{% if request.endpoint == 'main.admissions' %}active{% endif %}">Admissions</a>
                     <a href="{{ url_for('main.students') }}" class="{% if request.endpoint == 'main.students' %}active{% endif %}">Students</a>
                     <a href="{{ url_for('main.academics') }}" class="{% if request.endpoint == 'main.academics' %}active{% endif %}">Academics</a>
+                    <a href="{{ url_for('main.health') }}" class="{% if request.endpoint == 'main.health' %}active{% endif %}">Health</a>
+                    {% endif %}
+                    {% if current_user.role == 'parent' or current_user.role == 'admin' or current_user.role == 'teacher' %}
+                    <a href="{{ url_for('main.comments') }}" class="{% if request.endpoint == 'main.comments' %}active{% endif %}">Comments</a>
+                    {% endif %}
+                    {% if current_user.role in ['finance', 'admin', 'teacher'] %}
+                    <a href="{{ url_for('main.finance') }}" class="{% if request.endpoint == 'main.finance' %}active{% endif %}">Finance</a>
                     {% endif %}
                     <a href="{{ url_for('main.fees') }}" class="{% if request.endpoint == 'main.fees' %}active{% endif %}">Fees</a>
                     <a href="{{ url_for('main.messages') }}" class="{% if request.endpoint == 'main.messages' %}active{% endif %}">Messages</a>

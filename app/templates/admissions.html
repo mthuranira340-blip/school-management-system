@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block page_title %}Admissions{% endblock %}
+{% block content %}
+<section class="two-column">
+    <article class="glass-card">
+        <p class="eyebrow">New Admission</p>
+        <h3>Admit a new student</h3>
+        <form method="POST" novalidate class="form-stack">
+            {{ form.hidden_tag() }}
+            <div class="form-grid">
+                <div>{{ form.first_name.label(class="form-label") }}{{ form.first_name(class="form-control") }}</div>
+                <div>{{ form.last_name.label(class="form-label") }}{{ form.last_name(class="form-control") }}</div>
+                <div>{{ form.admission_number.label(class="form-label") }}{{ form.admission_number(class="form-control") }}</div>
+                <div>{{ form.class_name.label(class="form-label") }}{{ form.class_name(class="form-select") }}</div>
+                <div>{{ form.stream.label(class="form-label") }}{{ form.stream(class="form-select") }}</div>
+                <div>{{ form.parent_id.label(class="form-label") }}{{ form.parent_id(class="form-select") }}</div>
+            </div>
+            <div>{{ form.profile_photo.label(class="form-label") }}{{ form.profile_photo(class="form-control") }}</div>
+            {{ form.submit(class="btn btn-primary") }}
+        </form>
+    </article>
+
+    <article class="glass-card">
+        <p class="eyebrow">Recent Admissions</p>
+        <h3>Latest admitted students</h3>
+        <div class="mini-list">
+            {% for student in recent_admissions %}
+            <div class="student-list-card">
+                <div>
+                    <strong>{{ student.full_name }}</strong>
+                    <small>{{ student.admission_number }} | {{ student.class_name }} {{ student.stream }}</small>
+                </div>
+                <span>{{ student.portal_student_id }}</span>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No admissions yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

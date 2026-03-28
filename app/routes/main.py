@@ -1,4 +1,5 @@
 from io import BytesIO
+from datetime import datetime
 
 from flask import Blueprint, abort, flash, make_response, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
@@ -9,8 +10,35 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, Tabl
 from sqlalchemy import or_
 
 from ..extensions import db
-from ..forms import AchievementForm, ActivityForm, FeeStructureForm, MessageForm, PaymentForm, ResultForm, StudentForm, SubjectForm
-from ..models import Achievement, Activity, FeePayment, FeeStructure, Message, ParentStudentLink, Result, Student, Subject, User
+from ..forms import (
+    AchievementForm,
+    ActivityForm,
+    AdmissionForm,
+    FeeStructureForm,
+    FinanceReportForm,
+    HealthRecordForm,
+    MessageForm,
+    ParentCommentForm,
+    PaymentForm,
+    ResultForm,
+    StudentForm,
+    SubjectForm,
+)
+from ..models import (
+    Achievement,
+    Activity,
+    FeePayment,
+    FeeStructure,
+    FinanceReport,
+    HealthRecord,
+    Message,
+    ParentComment,
+    ParentStudentLink,
+    Result,
+    Student,
+    Subject,
+    User,
+)
 from ..services import dashboard_counts, fee_snapshot, generate_school_email, generate_student_portal_id, overall_performance, performance_trend, result_payload, student_result_cards, subject_breakdown
 
 
@@ -54,6 +82,12 @@ def student_parent_contacts(student):
     return User.query.filter(User.id.in_(parent_ids)).order_by(User.full_name.asc()).all()
 
 
+def can_view_student(student):
+    if current_user.role in {"admin", "teacher", "finance"}:
+        return True
+    return student in parent_students()
+
+
 def populate_student_choices(*forms):
     students = Student.query.order_by(Student.first_name.asc(), Student.last_name.asc()).all()
     choices = [(student.id, f"{student.full_name} ({student.admission_number})") for student in students]
@@ -87,6 +121,14 @@ def populate_message_choices(form):
     form.student_id.choices = [(0, "No student selected")] + [(student.id, student.full_name) for student in students]
 
 
+def populate_comment_student_choices(form):
+    if current_user.role == "parent":
+        students = parent_students()
+    else:
+        students = Student.query.order_by(Student.first_name.asc()).all()
+    form.student_id.choices = [(0, "General school feedback")] + [(student.id, student.full_name) for student in students]
+
+
 @main_bp.route("/")
 def index():
     if current_user.is_authenticated:
@@ -117,6 +159,20 @@ def dashboard():
     upcoming_activities = sorted(student.activities, key=lambda item: item.created_at, reverse=True)[:4] if student else []
     latest_achievements = sorted(student.achievements, key=lambda item: item.achievement_date, reverse=True)[:4] if student else []
     parent_contacts = student_parent_contacts(student)
+    health_records = (
+        HealthRecord.query.filter_by(student_id=student.id).order_by(HealthRecord.created_at.desc()).limit(4).all()
+        if student
+        else []
+    )
+    recent_comments = ParentComment.query.order_by(ParentComment.created_at.desc()).limit(4).all() if current_user.role in {"admin", "teacher"} else []
+    finance_reports = []
+    if current_user.role == "finance":
+        finance_reports = FinanceReport.query.filter_by(submitted_by_id=current_user.id).order_by(FinanceReport.submitted_at.desc()).limit(5).all()
+    elif current_user.role in {"admin", "teacher"}:
+        query = FinanceReport.query.order_by(FinanceReport.submitted_at.desc())
+        if current_user.role == "teacher":
+            query = query.filter_by(teacher_shared=True)
+        finance_reports = query.limit(5).all()
 
     return render_template(
         "dashboard.html",
@@ -133,6 +189,9 @@ def dashboard():
         low_grade_alerts=low_grade_alerts,
         upcoming_activities=upcoming_activities,
         latest_achievements=latest_achievements,
+        health_records=health_records,
+        recent_comments=recent_comments,
+        finance_reports=finance_reports,
         parent_contacts=parent_contacts,
         recent_messages=recent_messages,
     )
@@ -190,7 +249,7 @@ def student_profile(student_id):
     student = db.session.get(Student, student_id)
     if not student:
         abort(404)
-    if current_user.role == "parent" and student not in parent_students():
+    if not can_view_student(student):
         abort(403)
 
     results = student_result_cards(student)
@@ -200,6 +259,10 @@ def student_profile(student_id):
     fee_data = fee_snapshot(student)
     payments = sorted(student.fee_payments, key=lambda item: item.payment_date, reverse=True)
     parent_contacts = student_parent_contacts(student)
+    health_records = HealthRecord.query.filter_by(student_id=student.id).order_by(HealthRecord.created_at.desc()).all()
+    student_comments = ParentComment.query.filter(
+        or_(ParentComment.student_id == student.id, ParentComment.student_id.is_(None))
+    ).order_by(ParentComment.created_at.desc()).all()
 
     return render_template(
         "student_profile.html",
@@ -212,6 +275,8 @@ def student_profile(student_id):
         subject_values=subject_values,
         fee_data=fee_data,
         payments=payments,
+        health_records=health_records,
+        student_comments=student_comments,
         parent_contacts=parent_contacts,
     )
 
@@ -381,6 +446,154 @@ def messages():
     inbox = Message.query.filter_by(receiver_id=current_user.id).order_by(Message.sent_at.desc()).all()
     sent = Message.query.filter_by(sender_id=current_user.id).order_by(Message.sent_at.desc()).limit(8).all()
     return render_template("messages.html", form=form, inbox=inbox, sent=sent)
+
+
+@main_bp.route("/health", methods=["GET", "POST"])
+@login_required
+def health():
+    require_roles("admin", "teacher")
+    form = HealthRecordForm()
+    populate_student_choices(form)
+
+    if form.validate_on_submit():
+        record = HealthRecord(
+            student_id=form.student_id.data,
+            term=form.term.data,
+            academic_year=form.academic_year.data.strip(),
+            treatment=form.treatment.data.strip(),
+            notes=form.notes.data.strip() if form.notes.data else "",
+            recorded_by_id=current_user.id,
+        )
+        db.session.add(record)
+        db.session.commit()
+        flash("Health status saved successfully.", "success")
+        return redirect(url_for("main.health"))
+
+    records = HealthRecord.query.order_by(HealthRecord.created_at.desc()).limit(30).all()
+    return render_template("health.html", form=form, records=records)
+
+
+@main_bp.route("/comments", methods=["GET", "POST"])
+@login_required
+def comments():
+    form = ParentCommentForm()
+    populate_comment_student_choices(form)
+
+    if form.validate_on_submit():
+        if current_user.role != "parent":
+            abort(403)
+        student_id = form.student_id.data or None
+        if student_id:
+            allowed = {student.id for student in parent_students()}
+            if student_id not in allowed:
+                abort(403)
+        comment = ParentComment(
+            parent_id=current_user.id,
+            student_id=student_id,
+            category=form.category.data,
+            comment=form.comment.data.strip(),
+        )
+        db.session.add(comment)
+        db.session.commit()
+        flash("Comment posted successfully.", "success")
+        return redirect(url_for("main.comments"))
+
+    if current_user.role == "parent":
+        comments_list = ParentComment.query.filter_by(parent_id=current_user.id).order_by(ParentComment.created_at.desc()).all()
+    else:
+        comments_list = ParentComment.query.order_by(ParentComment.created_at.desc()).all()
+    return render_template("comments.html", form=form, comments_list=comments_list)
+
+
+@main_bp.route("/admissions", methods=["GET", "POST"])
+@login_required
+def admissions():
+    require_roles("admin", "teacher")
+    form = AdmissionForm()
+    populate_parent_choices(form)
+
+    if form.validate_on_submit():
+        admission_number = form.admission_number.data.strip().upper()
+        student = Student(
+            first_name=form.first_name.data.strip(),
+            last_name=form.last_name.data.strip(),
+            admission_number=admission_number,
+            portal_student_id=generate_student_portal_id(admission_number),
+            class_name=form.class_name.data,
+            stream=form.stream.data,
+            profile_photo=form.profile_photo.data.strip() if form.profile_photo.data else "",
+            school_email=generate_school_email(admission_number),
+        )
+        db.session.add(student)
+        db.session.flush()
+
+        if form.parent_id.data:
+            db.session.add(ParentStudentLink(parent_id=form.parent_id.data, student_id=student.id))
+
+        db.session.commit()
+        flash(f"New student admitted successfully. Portal ID: {student.portal_student_id}", "success")
+        return redirect(url_for("main.admissions"))
+
+    recent_admissions = Student.query.order_by(Student.created_at.desc()).limit(20).all()
+    return render_template("admissions.html", form=form, recent_admissions=recent_admissions)
+
+
+@main_bp.route("/finance", methods=["GET", "POST"])
+@login_required
+def finance():
+    form = FinanceReportForm()
+
+    if current_user.role == "finance":
+        if form.validate_on_submit():
+            report = FinanceReport(
+                submitted_by_id=current_user.id,
+                term=form.term.data,
+                academic_year=form.academic_year.data.strip(),
+                title=form.title.data.strip(),
+                amount_collected=form.amount_collected.data,
+                expected_amount=form.expected_amount.data,
+                report_body=form.report_body.data.strip(),
+            )
+            db.session.add(report)
+            db.session.commit()
+            flash("Finance report sent to the principal.", "success")
+            return redirect(url_for("main.finance"))
+        reports = FinanceReport.query.filter_by(submitted_by_id=current_user.id).order_by(FinanceReport.submitted_at.desc()).all()
+        return render_template("finance.html", form=form, reports=reports, mode="finance")
+
+    if current_user.role == "admin":
+        action = request.args.get("action")
+        report_id = request.args.get("report_id", type=int)
+        if action == "share" and report_id:
+            report = db.session.get(FinanceReport, report_id)
+            if report:
+                report.teacher_shared = True
+                report.reviewed_by_admin_id = current_user.id
+                report.reviewed_at = datetime.utcnow()
+                db.session.commit()
+                teacher_ids = [teacher.id for teacher in User.query.filter_by(role="teacher").all()]
+                for teacher_id in teacher_ids:
+                    db.session.add(
+                        Message(
+                            sender_id=current_user.id,
+                            receiver_id=teacher_id,
+                            category="Finance",
+                            subject=f"Finance report shared: {report.title}",
+                            body=f"Finance report for {report.term} {report.academic_year} has been approved by the principal and shared with staff.",
+                        )
+                    )
+                db.session.commit()
+                flash("Finance report shared with teachers.", "success")
+            return redirect(url_for("main.finance"))
+
+        reports = FinanceReport.query.order_by(FinanceReport.submitted_at.desc()).all()
+        return render_template("finance.html", form=None, reports=reports, mode="admin")
+
+    if current_user.role == "teacher":
+        reports = FinanceReport.query.filter_by(teacher_shared=True).order_by(FinanceReport.submitted_at.desc()).all()
+        return render_template("finance.html", form=None, reports=reports, mode="teacher")
+
+    abort(403)
 
 
 @main_bp.route("/export/pdf/<int:student_id>")

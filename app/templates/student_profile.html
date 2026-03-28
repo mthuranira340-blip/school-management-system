@@ -120,6 +120,26 @@
     <article class="glass-card">
         <div class="section-head">
             <div>
+                <p class="eyebrow mb-1">Health Status</p>
+                <h4 class="mb-0">Treatment this term</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for item in health_records %}
+            <div class="message-card">
+                <strong>{{ item.term }} {{ item.academic_year }}</strong>
+                <small>Treated for: {{ item.treatment }}</small>
+                <small>{{ item.notes or "No additional health notes." }}</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No health status records available.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
                 <p class="eyebrow mb-1">Activities</p>
                 <h4 class="mb-0">Co-curricular progress</h4>
             </div>
@@ -145,6 +165,26 @@
             <div class="achievement-tile"><strong>🏆 {{ item.title }}</strong><small>{{ item.category }} | {{ item.achievement_date.strftime('%d %b %Y') }}</small></div>
             {% else %}
             <p class="muted mb-0">No achievements yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Comments</p>
+                <h4 class="mb-0">Parent insight and school feedback</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for item in student_comments %}
+            <div class="message-card">
+                <strong>{{ item.category }}</strong>
+                <small>By {{ item.parent.full_name }} on {{ item.created_at.strftime('%d %b %Y') }}</small>
+                <small>{{ item.comment }}</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No comments posted yet.</p>
             {% endfor %}
         </div>
     </article>

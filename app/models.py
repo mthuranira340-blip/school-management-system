@@ -62,6 +62,10 @@ class User(UserMixin, db.Model):
     def is_parent(self):
         return self.role == "parent"
 
+    @property
+    def is_finance(self):
+        return self.role == "finance"
+
 
 class Student(db.Model):
     __tablename__ = "students"
@@ -206,6 +210,57 @@ class Message(db.Model):
     subject = db.Column(db.String(120), nullable=False)
     body = db.Column(db.Text, nullable=False)
     sent_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+
+class HealthRecord(db.Model):
+    __tablename__ = "health_records"
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
+    term = db.Column(db.String(30), nullable=False)
+    academic_year = db.Column(db.String(20), nullable=False)
+    treatment = db.Column(db.String(200), nullable=False)
+    notes = db.Column(db.Text, nullable=True)
+    recorded_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    student = db.relationship("Student", backref=db.backref("health_records", lazy=True, cascade="all, delete-orphan"))
+    recorded_by = db.relationship("User", foreign_keys=[recorded_by_id])
+
+
+class ParentComment(db.Model):
+    __tablename__ = "parent_comments"
+
+    id = db.Column(db.Integer, primary_key=True)
+    parent_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=True)
+    category = db.Column(db.String(40), nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    admin_response = db.Column(db.Text, nullable=True)
+
+    parent = db.relationship("User", foreign_keys=[parent_id])
+    student = db.relationship("Student", backref=db.backref("parent_comments", lazy=True, cascade="all, delete-orphan"))
+
+
+class FinanceReport(db.Model):
+    __tablename__ = "finance_reports"
+
+    id = db.Column(db.Integer, primary_key=True)
+    submitted_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False)
+    term = db.Column(db.String(30), nullable=False)
+    academic_year = db.Column(db.String(20), nullable=False)
+    title = db.Column(db.String(120), nullable=False)
+    amount_collected = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    expected_amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+    report_body = db.Column(db.Text, nullable=False)
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    reviewed_by_admin_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    teacher_shared = db.Column(db.Boolean, nullable=False, default=False)
+
+    submitted_by = db.relationship("User", foreign_keys=[submitted_by_id])
+    reviewed_by_admin = db.relationship("User", foreign_keys=[reviewed_by_admin_id])
 
 
 @login_manager.user_loader

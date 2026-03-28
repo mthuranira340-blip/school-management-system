@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
     phone_number VARCHAR(30) NULL,
     gender VARCHAR(20) NULL,
     password_hash VARCHAR(255) NOT NULL,
-    role ENUM('admin', 'teacher', 'parent') NOT NULL,
+    role ENUM('admin', 'teacher', 'parent', 'finance') NOT NULL,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -112,4 +112,46 @@ CREATE TABLE IF NOT EXISTS messages (
     CONSTRAINT fk_message_sender FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_message_receiver FOREIGN KEY (receiver_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_message_student FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS health_records (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    term VARCHAR(30) NOT NULL,
+    academic_year VARCHAR(20) NOT NULL,
+    treatment VARCHAR(200) NOT NULL,
+    notes TEXT NULL,
+    recorded_by_id INT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_health_student FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
+    CONSTRAINT fk_health_user FOREIGN KEY (recorded_by_id) REFERENCES users(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS parent_comments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    parent_id INT NOT NULL,
+    student_id INT NULL,
+    category VARCHAR(40) NOT NULL,
+    comment TEXT NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    admin_response TEXT NULL,
+    CONSTRAINT fk_comment_parent FOREIGN KEY (parent_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_comment_student FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS finance_reports (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    submitted_by_id INT NOT NULL,
+    term VARCHAR(30) NOT NULL,
+    academic_year VARCHAR(20) NOT NULL,
+    title VARCHAR(120) NOT NULL,
+    amount_collected DECIMAL(12,2) NOT NULL DEFAULT 0,
+    expected_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    report_body TEXT NOT NULL,
+    submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    reviewed_by_admin_id INT NULL,
+    reviewed_at DATETIME NULL,
+    teacher_shared BOOLEAN NOT NULL DEFAULT FALSE,
+    CONSTRAINT fk_report_finance FOREIGN KEY (submitted_by_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_report_admin FOREIGN KEY (reviewed_by_admin_id) REFERENCES users(id) ON DELETE SET NULL
 );

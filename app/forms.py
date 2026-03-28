@@ -5,7 +5,7 @@ from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange
 from .models import Student, Subject, User
 
 
-ROLE_CHOICES = [("admin", "Admin"), ("teacher", "Teacher"), ("parent", "Parent")]
+ROLE_CHOICES = [("admin", "Admin"), ("teacher", "Teacher"), ("parent", "Parent"), ("finance", "Finance")]
 TERM_CHOICES = [("Term 1", "Term 1"), ("Term 2", "Term 2"), ("Term 3", "Term 3")]
 CLASS_CHOICES = [(f"Form {level}", f"Form {level}") for level in range(1, 5)]
 STREAM_CHOICES = [("North", "North"), ("South", "South"), ("East", "East"), ("West", "West")]
@@ -18,6 +18,7 @@ MESSAGE_CATEGORIES = [
     ("Fees", "Fees"),
     ("Academic", "Academic"),
 ]
+COMMENT_CATEGORIES = [("Performance", "Performance"), ("School Development", "School Development")]
 
 
 class RegistrationForm(FlaskForm):
@@ -155,3 +156,40 @@ class MessageForm(FlaskForm):
     subject = StringField("Subject", validators=[DataRequired(), Length(max=120)])
     body = TextAreaField("Message", validators=[DataRequired(), Length(min=10, max=1000)])
     submit = SubmitField("Send update")
+
+
+class HealthRecordForm(FlaskForm):
+    student_id = SelectField("Student", coerce=int, choices=[], validators=[DataRequired()])
+    term = SelectField("Term", choices=TERM_CHOICES, validators=[DataRequired()])
+    academic_year = StringField("Academic year", validators=[DataRequired(), Length(max=20)])
+    treatment = StringField("Treatment / vaccination", validators=[DataRequired(), Length(max=200)])
+    notes = TextAreaField("Notes", validators=[Optional(), Length(max=1000)])
+    submit = SubmitField("Save health status")
+
+
+class ParentCommentForm(FlaskForm):
+    student_id = SelectField("Student", coerce=int, choices=[], validators=[Optional()])
+    category = SelectField("Category", choices=COMMENT_CATEGORIES, validators=[DataRequired()])
+    comment = TextAreaField("Comment", validators=[DataRequired(), Length(min=8, max=1000)])
+    submit = SubmitField("Post comment")
+
+
+class AdmissionForm(FlaskForm):
+    first_name = StringField("First name", validators=[DataRequired(), Length(max=80)])
+    last_name = StringField("Last name", validators=[DataRequired(), Length(max=80)])
+    admission_number = StringField("Admission number", validators=[DataRequired(), Length(max=30)])
+    class_name = SelectField("Class", choices=CLASS_CHOICES, validators=[DataRequired()])
+    stream = SelectField("Stream", choices=STREAM_CHOICES, validators=[DataRequired()])
+    profile_photo = StringField("Profile photo URL", validators=[Optional(), Length(max=255)])
+    parent_id = SelectField("Parent account", coerce=int, choices=[], validators=[Optional()])
+    submit = SubmitField("Admit student")
+
+
+class FinanceReportForm(FlaskForm):
+    term = SelectField("Term", choices=TERM_CHOICES, validators=[DataRequired()])
+    academic_year = StringField("Academic year", validators=[DataRequired(), Length(max=20)])
+    title = StringField("Report title", validators=[DataRequired(), Length(max=120)])
+    amount_collected = DecimalField("Amount collected", validators=[DataRequired(), NumberRange(min=0)], places=2)
+    expected_amount = DecimalField("Expected amount", validators=[DataRequired(), NumberRange(min=0)], places=2)
+    report_body = TextAreaField("Finance summary", validators=[DataRequired(), Length(min=10, max=3000)])
+    submit = SubmitField("Send report to principal")

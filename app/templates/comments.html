@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block page_title %}Comments{% endblock %}
+{% block content %}
+{% if current_user.role == 'parent' %}
+<section class="glass-card">
+    <p class="eyebrow">Parent Insight</p>
+    <h3>Share performance review and school development feedback</h3>
+    <form method="POST" novalidate class="form-stack">
+        {{ form.hidden_tag() }}
+        <div class="form-grid">
+            <div>{{ form.student_id.label(class="form-label") }}{{ form.student_id(class="form-select") }}</div>
+            <div>{{ form.category.label(class="form-label") }}{{ form.category(class="form-select") }}</div>
+        </div>
+        <div>{{ form.comment.label(class="form-label") }}{{ form.comment(class="form-control", rows="4", placeholder="Share your review or development idea...") }}</div>
+        {{ form.submit(class="btn btn-primary") }}
+    </form>
+</section>
+{% endif %}
+
+<section class="glass-card {% if current_user.role == 'parent' %}mt-4{% endif %}">
+    <p class="eyebrow">Comment Feed</p>
+    <h3>
+        {% if current_user.role == 'parent' %}
+        Your submitted comments
+        {% else %}
+        Parent feedback for leadership and teachers
+        {% endif %}
+    </h3>
+    <div class="message-list">
+        {% for item in comments_list %}
+        <div class="message-card">
+            <strong>{{ item.category }}{% if item.student %} | {{ item.student.full_name }}{% else %} | General{% endif %}</strong>
+            <small>By {{ item.parent.full_name }} on {{ item.created_at.strftime('%d %b %Y %H:%M') }}</small>
+            <p class="mb-0">{{ item.comment }}</p>
+        </div>
+        {% else %}
+        <p class="muted mb-0">No comments posted yet.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}
