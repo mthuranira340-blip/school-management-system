@@ -3,6 +3,7 @@ from flask import render_template
 
 from config import Config
 from .extensions import csrf, db, login_manager
+from .services import ensure_schema_updates, seed_demo_data
 
 
 def create_app(config_class=Config):
@@ -31,5 +32,7 @@ def create_app(config_class=Config):
 
     with app.app_context():
         db.create_all()
+        ensure_schema_updates()
+        seed_demo_data()
 
     return app

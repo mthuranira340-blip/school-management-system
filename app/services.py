@@ -1,300 +1,273 @@
 from collections import defaultdict
-from datetime import date, datetime, timedelta
-import json
-import os
-from urllib import error, request
+from datetime import date
+from decimal import Decimal
+
+from sqlalchemy import inspect, text
+
+from .extensions import db
+from .models import Achievement, Activity, FeePayment, FeeStructure, Message, ParentStudentLink, Result, Student, Subject, User
 
 
-GRADE_POINTS = {
-    "A": 4.0,
-    "B+": 3.5,
-    "B": 3.0,
-    "C+": 2.5,
-    "C": 2.0,
-    "D": 1.0,
-    "E": 0.0,
-}
-
-
-def grade_to_point(grade):
-    return GRADE_POINTS.get(grade, 0.0)
-
-
-def calculate_gpa(grades):
-    if not grades:
-        return 0.0
-
-    total_points = sum(grade_to_point(entry.grade) for entry in grades)
-    return round(total_points / len(grades), 2)
-
-
-def performance_timeline(grades):
-    grouped = defaultdict(list)
-    for entry in grades:
-        label = f"{entry.academic_year} - {entry.semester}"
-        grouped[label].append(grade_to_point(entry.grade))
-
-    labels = list(grouped.keys())
-    averages = [round(sum(values) / len(values), 2) for values in grouped.values()]
-    return labels, averages
-
-
-def low_grade_alerts(grades):
-    return [entry for entry in grades if grade_to_point(entry.grade) <= 2.0]
-
-
-ACADEMIC_CALENDAR = [
-    {
-        "name": "Semester 1",
-        "start": (1, 8),
-        "end": (4, 30),
-        "payment_deadline": (1, 31),
-        "services": [
-            {"name": "Tuition", "amount_usd": 350},
-            {"name": "Registration", "amount_usd": 40},
-            {"name": "Library", "amount_usd": 25},
-            {"name": "Student Portal", "amount_usd": 15},
-        ],
-    },
-    {
-        "name": "Semester 2",
-        "start": (5, 1),
-        "end": (8, 31),
-        "payment_deadline": (5, 31),
-        "services": [
-            {"name": "Tuition", "amount_usd": 350},
-            {"name": "Examination", "amount_usd": 60},
-            {"name": "Lab Access", "amount_usd": 45},
-            {"name": "Hostel Support", "amount_usd": 120},
-        ],
-    },
-    {
-        "name": "Semester 3",
-        "start": (9, 1),
-        "end": (12, 20),
-        "payment_deadline": (9, 30),
-        "services": [
-            {"name": "Tuition", "amount_usd": 350},
-            {"name": "Project Supervision", "amount_usd": 80},
-            {"name": "Internet Access", "amount_usd": 20},
-            {"name": "E-Learning", "amount_usd": 30},
-        ],
-    },
+GRADE_RULES = [
+    (80, "A", 4.0, "Excellent", "🟢"),
+    (70, "B", 3.0, "Good", "🟡"),
+    (60, "C", 2.0, "Average", "🟡"),
+    (50, "D", 1.0, "Needs Improvement", "🔴"),
+    (0, "E", 0.0, "Needs Improvement", "🔴"),
 ]
 
-PAYPAL_ACCOUNT = "mthuranira340@gmail.com"
-AI_SUPPORT_PRICE_USD = 30
-AI_SUPPORT_PERIOD_MONTHS = 4
+
+def generate_school_email(identifier, domain="greenfieldhigh.edu"):
+    return f"{str(identifier).strip().lower()}@{domain}"
 
 
-def get_payment_prompt(today=None):
-    today = today or date.today()
+def generate_student_portal_id(admission_number):
+    return f"STU-{str(admission_number).strip().upper()}"
 
-    for term in ACADEMIC_CALENDAR:
-        start = date(today.year, term["start"][0], term["start"][1])
-        end = date(today.year, term["end"][0], term["end"][1])
-        deadline = date(today.year, term["payment_deadline"][0], term["payment_deadline"][1])
-        service_names = [service["name"] for service in term["services"]]
-        total_amount = sum(service["amount_usd"] for service in term["services"])
 
-        if start <= today <= end:
-            days_left = (deadline - today).days
-            if days_left >= 0:
-                status = "Payment window is open"
-                tone = "warning" if days_left <= 7 else "primary"
-                summary = (
-                    f"Please pay for {', '.join(service_names)} before "
-                    f"{deadline.strftime('%d %b %Y')} to keep your services active."
-                )
-            else:
-                status = "Payment deadline has passed"
-                tone = "danger"
-                summary = (
-                    f"Payment for {', '.join(service_names)} was due on "
-                    f"{deadline.strftime('%d %b %Y')}. Clear the balance to restore uninterrupted access."
-                )
+def score_to_grade(score):
+    numeric_score = float(score or 0)
+    for minimum, grade, points, label, icon in GRADE_RULES:
+        if numeric_score >= minimum:
+            return {"grade": grade, "points": points, "label": label, "icon": icon}
+    return {"grade": "E", "points": 0.0, "label": "Needs Improvement", "icon": "🔴"}
 
-            return {
-                "term_name": term["name"],
-                "status": status,
-                "tone": tone,
-                "deadline": deadline.strftime("%d %b %Y"),
-                "days_left": days_left,
-                "services": term["services"],
-                "total_amount_usd": total_amount,
-                "paypal_account": PAYPAL_ACCOUNT,
-                "summary": summary,
-            }
 
-    next_term = ACADEMIC_CALENDAR[0]
-    next_deadline = date(today.year + 1, next_term["payment_deadline"][0], next_term["payment_deadline"][1])
-    next_total_amount = sum(service["amount_usd"] for service in next_term["services"])
+def result_payload(result):
+    grade_data = score_to_grade(result.total_score)
     return {
-        "term_name": next_term["name"],
-        "status": "Upcoming payment cycle",
-        "tone": "info",
-        "deadline": next_deadline.strftime("%d %b %Y"),
-        "days_left": (next_deadline - today).days,
-        "services": next_term["services"],
-        "total_amount_usd": next_total_amount,
-        "paypal_account": PAYPAL_ACCOUNT,
-        "summary": (
-            f"The next academic payment cycle is for {next_term['name']}. "
-            f"Plan ahead for {', '.join(service['name'] for service in next_term['services'])} "
-            f"before {next_deadline.strftime('%d %b %Y')}."
-        ),
+        "id": result.id,
+        "subject": result.subject.name,
+        "subject_code": result.subject.code,
+        "term": result.term,
+        "academic_year": result.academic_year,
+        "cat_score": float(result.cat_score),
+        "exam_score": float(result.exam_score),
+        "total_score": result.total_score,
+        "average_score": result.average_score,
+        "grade": grade_data["grade"],
+        "grade_points": grade_data["points"],
+        "status_label": grade_data["label"],
+        "status_icon": grade_data["icon"],
     }
 
 
-def calculate_ai_support_pricing():
-    return AI_SUPPORT_PRICE_USD
+def student_result_cards(student):
+    return [result_payload(entry) for entry in sorted(student.results, key=lambda item: (item.academic_year, item.term, item.subject.code))]
 
 
-def build_note_library(units):
-    notes = []
-    for unit in units:
-        notes.extend(
-            [
-                {
-                    "unit_id": unit.id,
-                    "unit_code": unit.unit_code,
-                    "unit_name": unit.unit_name,
-                    "title": f"{unit.unit_name} Core Concepts",
-                    "tag": "Best Notes",
-                    "quality_score": 98,
-                    "summary": (
-                        f"High-yield notes for {unit.unit_code} covering definitions, core principles, and exam-ready explanations."
-                    ),
-                    "points": [
-                        f"Start with the main learning outcomes for {unit.unit_name}.",
-                        f"Break each topic into short definitions, worked examples, and likely exam questions.",
-                        f"Review course-specific vocabulary and lecturer emphasis areas each week.",
-                    ],
-                },
-                {
-                    "unit_id": unit.id,
-                    "unit_code": unit.unit_code,
-                    "unit_name": unit.unit_name,
-                    "title": f"{unit.unit_name} Assignment Guide",
-                    "tag": "Assignment Support",
-                    "quality_score": 91,
-                    "summary": (
-                        f"A structured guide for handling assignments in {unit.unit_code} with planning, references, and submission tips."
-                    ),
-                    "points": [
-                        "Read the rubric first and turn it into a checklist.",
-                        "Collect lecturer notes, class examples, and recommended readings before drafting.",
-                        "Reserve time for editing, citations, and final proof-reading.",
-                    ],
-                },
-            ]
-        )
-
-    return sorted(notes, key=lambda item: (-item["quality_score"], item["unit_code"]))
-
-
-def filter_notes(notes, unit_id=None):
-    if not unit_id:
-        return notes
-    return [note for note in notes if note["unit_id"] == unit_id]
-
-
-def generate_study_support(unit, assignment_type, question):
-    api_key = os.environ.get("OPENAI_API_KEY")
-    fallback = (
-        f"Study support for {unit.unit_code} - {unit.unit_name}\n\n"
-        f"Assignment type: {assignment_type.replace('_', ' ').title()}\n"
-        f"Request: {question}\n\n"
-        "Suggested approach:\n"
-        "1. Restate the question in your own words and identify the required output.\n"
-        "2. Split the work into introduction, key discussion points, evidence/examples, and conclusion.\n"
-        "3. Use your lecture notes, unit readings, and class examples to support each section.\n"
-        "4. Draft one strong argument at a time, then review for clarity, citations, and accuracy.\n\n"
-        "Quick notes:\n"
-        f"- Focus on the main concepts repeatedly covered in {unit.unit_name}.\n"
-        "- Add one practical example or case study for each major point.\n"
-        "- Finish with a short revision summary before submitting."
-    )
-
-    if not api_key:
-        return fallback, False, "Offline study helper"
-
-    payload = {
-        "model": os.environ.get("OPENAI_MODEL", "gpt-4.1-mini"),
-        "input": (
-            "You are a university study assistant. Help a student complete an assignment and provide concise course notes.\n"
-            f"Unit: {unit.unit_code} - {unit.unit_name}\n"
-            f"Course: {unit.course}\n"
-            f"Level: {unit.level_of_study}\n"
-            f"Assignment type: {assignment_type}\n"
-            f"Student request: {question}\n\n"
-            "Return:\n"
-            "1. A short assignment plan\n"
-            "2. Key notes for the unit\n"
-            "3. Practical tips for scoring well"
-        ),
-    }
-
-    req = request.Request(
-        "https://api.openai.com/v1/responses",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {api_key}",
-        },
-        method="POST",
-    )
-
-    try:
-        with request.urlopen(req, timeout=30) as response:
-            body = json.loads(response.read().decode("utf-8"))
-            output_text = body.get("output_text")
-            if output_text:
-                return output_text, True, payload["model"]
-    except (error.URLError, error.HTTPError, TimeoutError, json.JSONDecodeError):
-        pass
-
-    return fallback, False, "Offline study helper"
-
-
-def build_activity_payload(activities, now=None):
-    now = now or datetime.now()
-    calendar_items = []
-    reminders = []
-
-    for activity in activities:
-        hours_until = round((activity.start_time - now).total_seconds() / 3600, 1)
-        reminder_due = activity.reminder_time <= now < activity.start_time
-
-        item = {
-            "id": activity.id,
-            "title": activity.title,
-            "category": activity.category,
-            "description": activity.description or "No extra details added.",
-            "date_label": activity.start_time.strftime("%d %b %Y"),
-            "time_label": activity.start_time.strftime("%H:%M"),
-            "reminder_label": activity.reminder_time.strftime("%d %b %Y %H:%M"),
-            "hours_until": hours_until,
-            "is_upcoming": activity.start_time >= now,
+def overall_performance(student):
+    cards = student_result_cards(student)
+    if not cards:
+        return {
+            "average": 0,
+            "grade": "N/A",
+            "gpa": 0,
+            "status_label": "No results yet",
+            "status_icon": "⚪",
         }
-        calendar_items.append(item)
 
-        if reminder_due:
-            reminders.append(
-                {
-                    "title": activity.title,
-                    "category": activity.category.replace("_", " ").title(),
-                    "start_label": activity.start_time.strftime("%d %b %Y at %H:%M"),
-                    "message": (
-                        f"Reminder: {activity.title} is scheduled for {activity.start_time.strftime('%d %b %Y at %H:%M')}."
-                    ),
-                }
-            )
-
-    calendar_items.sort(key=lambda item: (not item["is_upcoming"], item["date_label"], item["time_label"]))
-    reminders.sort(key=lambda item: item["start_label"])
-    return calendar_items, reminders
+    average = round(sum(card["total_score"] for card in cards) / len(cards), 2)
+    grade_data = score_to_grade(average)
+    gpa = round(sum(card["grade_points"] for card in cards) / len(cards), 2)
+    return {
+        "average": average,
+        "grade": grade_data["grade"],
+        "gpa": gpa,
+        "status_label": grade_data["label"],
+        "status_icon": grade_data["icon"],
+    }
 
 
-def default_reminder_time(start_time):
-    return start_time - timedelta(hours=24)
+def performance_trend(student):
+    grouped = defaultdict(list)
+    for item in student.results:
+        grouped[f"{item.term} {item.academic_year}"].append(item.total_score)
+
+    labels = list(grouped.keys())
+    values = [round(sum(scores) / len(scores), 2) for scores in grouped.values()]
+    return labels, values
+
+
+def subject_breakdown(student):
+    grouped = defaultdict(list)
+    for item in student.results:
+        grouped[item.subject.name].append(item.total_score)
+    labels = list(grouped.keys())
+    values = [round(sum(scores) / len(scores), 2) for scores in grouped.values()]
+    return labels, values
+
+
+def fee_snapshot(student):
+    fee = student.latest_fee
+    if not fee:
+        return {
+            "total": 0,
+            "paid": 0,
+            "balance": 0,
+            "status": "Pending",
+            "icon": "⚠️",
+        }
+
+    balance = fee.balance
+    if balance <= 0:
+        return {"total": float(fee.total_amount), "paid": float(fee.paid_amount), "balance": 0, "status": "Paid", "icon": "✅"}
+    if fee.due_date < date.today():
+        return {
+            "total": float(fee.total_amount),
+            "paid": float(fee.paid_amount),
+            "balance": balance,
+            "status": "Overdue",
+            "icon": "❌",
+        }
+    return {
+        "total": float(fee.total_amount),
+        "paid": float(fee.paid_amount),
+        "balance": balance,
+        "status": "Pending",
+        "icon": "⚠️",
+    }
+
+
+def dashboard_counts():
+    return {
+        "students": Student.query.count(),
+        "subjects": Subject.query.count(),
+        "parents": User.query.filter_by(role="parent").count(),
+        "teachers": User.query.filter_by(role="teacher").count(),
+    }
+
+
+def ensure_schema_updates():
+    inspector = inspect(db.engine)
+
+    if "users" in inspector.get_table_names():
+        user_columns = {column["name"] for column in inspector.get_columns("users")}
+        if "phone_number" not in user_columns:
+            db.session.execute(text("ALTER TABLE users ADD COLUMN phone_number VARCHAR(30)"))
+        if "gender" not in user_columns:
+            db.session.execute(text("ALTER TABLE users ADD COLUMN gender VARCHAR(20)"))
+
+    if "students" in inspector.get_table_names():
+        student_columns = {column["name"] for column in inspector.get_columns("students")}
+        if "portal_student_id" not in student_columns:
+            db.session.execute(text("ALTER TABLE students ADD COLUMN portal_student_id VARCHAR(40)"))
+            students = Student.query.all()
+            for student in students:
+                student.portal_student_id = generate_student_portal_id(student.admission_number)
+
+    db.session.commit()
+
+
+def seed_demo_data():
+    if User.query.first():
+        return
+
+    admin = User(
+        full_name="Grace Wanjiru",
+        username="admin",
+        email="admin@demo.local",
+        school_email=generate_school_email("admin"),
+        role="admin",
+    )
+    admin.set_password("admin123")
+
+    teacher = User(
+        full_name="Mr. Otieno",
+        username="teacher",
+        email="teacher@demo.local",
+        school_email=generate_school_email("teacher"),
+        role="teacher",
+    )
+    teacher.set_password("teacher123")
+
+    parent = User(
+        full_name="Sarah Njeri",
+        username="parent",
+        email="parent@demo.local",
+        school_email=generate_school_email("parent"),
+        phone_number="+254700123456",
+        gender="Female",
+        role="parent",
+    )
+    parent.set_password("parent123")
+
+    db.session.add_all([admin, teacher, parent])
+    db.session.flush()
+
+    student = Student(
+        first_name="Amina",
+        last_name="Kamau",
+        admission_number="ADM001",
+        portal_student_id=generate_student_portal_id("ADM001"),
+        class_name="Form 3",
+        stream="North",
+        profile_photo="https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&w=400&q=80",
+        school_email=generate_school_email("adm001"),
+    )
+    db.session.add(student)
+    db.session.flush()
+
+    db.session.add(ParentStudentLink(parent_id=parent.id, student_id=student.id))
+
+    subjects = [
+        Subject(name="Mathematics", code="MATH"),
+        Subject(name="English", code="ENG"),
+        Subject(name="Biology", code="BIO"),
+        Subject(name="History", code="HIST"),
+    ]
+    db.session.add_all(subjects)
+    db.session.flush()
+
+    results = [
+        Result(student_id=student.id, subject_id=subjects[0].id, term="Term 1", academic_year="2026", cat_score=34, exam_score=51, created_by_id=teacher.id),
+        Result(student_id=student.id, subject_id=subjects[1].id, term="Term 1", academic_year="2026", cat_score=29, exam_score=39, created_by_id=teacher.id),
+        Result(student_id=student.id, subject_id=subjects[2].id, term="Term 2", academic_year="2026", cat_score=32, exam_score=45, created_by_id=teacher.id),
+        Result(student_id=student.id, subject_id=subjects[3].id, term="Term 2", academic_year="2026", cat_score=26, exam_score=31, created_by_id=teacher.id),
+    ]
+    db.session.add_all(results)
+
+    db.session.add_all(
+        [
+            Activity(student_id=student.id, activity_name="Football Team", activity_type="Sports", participation_level="Excellent", progress_percent=86, progress_note="Selected for inter-school tournament."),
+            Activity(student_id=student.id, activity_name="Science Club", activity_type="Club", participation_level="Active", progress_percent=72, progress_note="Leading the water filtration project."),
+        ]
+    )
+
+    db.session.add_all(
+        [
+            Achievement(student_id=student.id, title="Top 10 Mathematics", category="Academic Award", description="Ranked in the top ten school-wide in mathematics.", achievement_date=date(2026, 2, 14)),
+            Achievement(student_id=student.id, title="Regional Football Silver Medal", category="Sports", description="Won silver at the regional girls football finals.", achievement_date=date(2026, 3, 5)),
+        ]
+    )
+
+    fee = FeeStructure(
+        student_id=student.id,
+        term="Term 1",
+        academic_year="2026",
+        total_amount=Decimal("18500.00"),
+        due_date=date(2026, 4, 15),
+    )
+    db.session.add(fee)
+    db.session.flush()
+
+    db.session.add(
+        FeePayment(
+            student_id=student.id,
+            fee_structure_id=fee.id,
+            amount_paid=Decimal("12000.00"),
+            payment_date=date(2026, 2, 1),
+            reference="RCPT-2026-001",
+            recorded_by=teacher.full_name,
+        )
+    )
+
+    db.session.add_all(
+        [
+            Message(sender_id=admin.id, receiver_id=parent.id, student_id=student.id, category="Weekend Travel", subject="Weekend travel notice", body="Students will be released on Friday at 3:00 PM and should return by Sunday 5:00 PM."),
+            Message(sender_id=teacher.id, receiver_id=parent.id, student_id=student.id, category="Co-Curricular", subject="Football training camp", body="Amina has been selected for the Saturday morning football training camp."),
+            Message(sender_id=teacher.id, receiver_id=parent.id, student_id=student.id, category="Academic", subject="Mid-term performance update", body="Amina is showing strong progress in Mathematics and Biology. Please encourage revision in History."),
+        ]
+    )
+
+    db.session.commit()

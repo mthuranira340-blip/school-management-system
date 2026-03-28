@@ -1,51 +1,45 @@
-const root = document.documentElement;
-const themeToggle = document.getElementById("themeToggle");
-const storedTheme = localStorage.getItem("uat-theme");
-
-if (storedTheme) {
-    root.setAttribute("data-bs-theme", storedTheme);
-}
-
-if (themeToggle) {
-    themeToggle.addEventListener("click", () => {
-        const nextTheme = root.getAttribute("data-bs-theme") === "dark" ? "light" : "dark";
-        root.setAttribute("data-bs-theme", nextTheme);
-        localStorage.setItem("uat-theme", nextTheme);
-    });
-}
-
 const roleSelect = document.getElementById("roleSelect");
-const linkedStudentWrapper = document.getElementById("linkedStudentWrapper");
+const linkedStudentWrap = document.getElementById("linkedStudentWrap");
+const sidebar = document.getElementById("sidebar");
+const sidebarToggle = document.getElementById("sidebarToggle");
 
-function toggleLinkedStudentField() {
-    if (!roleSelect || !linkedStudentWrapper) {
+function toggleLinkedStudent() {
+    if (!roleSelect || !linkedStudentWrap) {
         return;
     }
-    linkedStudentWrapper.style.display = roleSelect.value === "parent" ? "block" : "none";
+    linkedStudentWrap.style.display = roleSelect.value === "parent" ? "block" : "none";
 }
 
 if (roleSelect) {
-    toggleLinkedStudentField();
-    roleSelect.addEventListener("change", toggleLinkedStudentField);
+    toggleLinkedStudent();
+    roleSelect.addEventListener("change", toggleLinkedStudent);
 }
 
-const chartCanvas = document.getElementById("performanceChart");
-if (chartCanvas && window.performanceChartData) {
-    new Chart(chartCanvas, {
-        type: "line",
+if (sidebarToggle && sidebar) {
+    sidebarToggle.addEventListener("click", () => {
+        sidebar.classList.toggle("open");
+    });
+}
+
+function buildChart(canvasId, label, data, type = "line") {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || !data || !data.labels || !data.labels.length) {
+        return;
+    }
+
+    const baseConfig = {
+        type,
         data: {
-            labels: window.performanceChartData.labels,
+            labels: data.labels,
             datasets: [
                 {
-                    label: "Average Grade Point",
-                    data: window.performanceChartData.values,
-                    borderColor: "#0d6efd",
-                    backgroundColor: "rgba(13, 110, 253, 0.18)",
+                    label,
+                    data: data.values,
+                    borderColor: "#1f4c73",
+                    backgroundColor: type === "bar" ? ["#1f4c73", "#3ca89b", "#f0b44c", "#ef7e79", "#8fb3cc"] : "rgba(60, 168, 155, 0.2)",
                     borderWidth: 3,
-                    pointRadius: 4,
-                    pointHoverRadius: 6,
-                    tension: 0.35,
-                    fill: true
+                    tension: 0.3,
+                    fill: type !== "bar"
                 }
             ]
         },
@@ -55,36 +49,19 @@ if (chartCanvas && window.performanceChartData) {
             scales: {
                 y: {
                     beginAtZero: true,
-                    max: 4
+                    max: 100
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
                 }
             }
         }
-    });
+    };
+
+    new Chart(canvas, baseConfig);
 }
 
-const gpaCanvas = document.getElementById("gpaChart");
-if (gpaCanvas && window.gpaChartData) {
-    new Chart(gpaCanvas, {
-        type: "bar",
-        data: {
-            labels: window.gpaChartData.labels,
-            datasets: [
-                {
-                    label: "Semester GPA",
-                    data: window.gpaChartData.values,
-                    backgroundColor: ["#2fb380", "#0d6efd", "#ffc107", "#dc3545", "#6f42c1", "#20c997"]
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    max: 4
-                }
-            }
-        }
-    });
-}
+buildChart("trendChart", "Average Score", window.trendChartData, "line");
+buildChart("subjectChart", "Subject Average", window.subjectChartData, "bar");

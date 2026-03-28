@@ -6,8 +6,17 @@ def resolve_database_url():
     if database_url:
         return database_url
 
-    # Default to SQLite so the app can run on free/demo hosting without MySQL.
-    return "sqlite:///academic_tracker_demo.db"
+    mysql_user = os.environ.get("MYSQL_USER")
+    mysql_password = os.environ.get("MYSQL_PASSWORD")
+    mysql_host = os.environ.get("MYSQL_HOST", "localhost")
+    mysql_port = os.environ.get("MYSQL_PORT", "3306")
+    mysql_db = os.environ.get("MYSQL_DB", "high_school_management")
+
+    if mysql_user and mysql_password:
+        return f"mysql+pymysql://{mysql_user}:{mysql_password}@{mysql_host}:{mysql_port}/{mysql_db}"
+
+    # SQLite fallback keeps the demo runnable when MySQL is not configured locally.
+    return "sqlite:///high_school_management_demo.db"
 
 
 class Config:

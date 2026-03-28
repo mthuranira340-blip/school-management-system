@@ -1,252 +1,251 @@
 {% extends "base.html" %}
+{% block page_title %}Overview{% endblock %}
 {% block content %}
-<section class="hero-panel mb-4">
+<section class="hero-card">
     <div>
-        <p class="eyebrow">Performance Overview</p>
-        <h3 class="mb-2">
-            {% if selected_student %}
-                {{ selected_student.username }}'s academic snapshot
-            {% else %}
-                No linked student profile found
+        <p class="eyebrow">School Snapshot</p>
+        <h3>Manage learners, family communication, performance trends, and fee follow-up from one responsive dashboard.</h3>
+        <p class="muted mb-0">Parents see only linked student records. Teachers and administrators get school-wide management tools.</p>
+    </div>
+    {% if student %}
+    <div class="hero-badge">
+        <span>{{ performance.status_icon }}</span>
+        <strong>{{ performance.grade }}</strong>
+        <small>{{ performance.status_label }}</small>
+    </div>
+    {% endif %}
+</section>
+
+<section class="stats-grid">
+    <article class="glass-card stat-card">
+        <span>👩‍🎓</span>
+        <strong>{{ counts.students }}</strong>
+        <small>Students</small>
+    </article>
+    <article class="glass-card stat-card">
+        <span>📚</span>
+        <strong>{{ counts.subjects }}</strong>
+        <small>Subjects</small>
+    </article>
+    <article class="glass-card stat-card">
+        <span>👨‍👩‍👧</span>
+        <strong>{{ counts.parents }}</strong>
+        <small>Parents</small>
+    </article>
+    <article class="glass-card stat-card">
+        <span>🧑‍🏫</span>
+        <strong>{{ counts.teachers }}</strong>
+        <small>Teachers</small>
+    </article>
+</section>
+
+<section class="content-grid">
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Selected Student</p>
+                <h4 class="mb-0">{% if student %}{{ student.full_name }}{% else %}No linked student{% endif %}</h4>
+            </div>
+            {% if student %}
+            <a class="btn btn-outline-dark btn-sm" href="{{ url_for('main.student_profile', student_id=student.id) }}">Open Profile</a>
             {% endif %}
-        </h3>
-        <p class="text-body-secondary mb-0">
-            Review GPA, semester trends, and low-grade notifications in one place.
-        </p>
-    </div>
-    <div class="gpa-badge">
-        <span>Current GPA</span>
-        <strong>{{ gpa }}</strong>
-    </div>
-</section>
-
-<section class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="metric-card">
-            <p>Total Students</p>
-            <h3>{{ summary.students }}</h3>
         </div>
-    </div>
-    <div class="col-md-4">
-        <div class="metric-card">
-            <p>Total Units</p>
-            <h3>{{ summary.units }}</h3>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="metric-card">
-            <p>Total Grades</p>
-            <h3>{{ summary.grades }}</h3>
-        </div>
-    </div>
-</section>
-
-<section class="content-card mb-4 payment-card payment-card-{{ payment_prompt.tone }}">
-    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-        <div>
-            <p class="eyebrow">Academic Calendar Payment Prompt</p>
-            <div class="payment-heading mb-2">
-                <span class="dollar-icon">$</span>
-                <h4 class="mb-0">{{ payment_prompt.term_name }}</h4>
-            </div>
-            <p class="mb-2">{{ payment_prompt.summary }}</p>
-            <div class="payment-scheme">
-                {% for service in payment_prompt.services %}
-                <div class="scheme-row">
-                    <span>{{ service.name }}</span>
-                    <strong>${{ service.amount_usd }}</strong>
-                </div>
-                {% endfor %}
-                <div class="scheme-row total-row">
-                    <span>Total Due</span>
-                    <strong>${{ payment_prompt.total_amount_usd }}</strong>
-                </div>
-            </div>
-            <div class="payment-destination mt-3">
-                <span class="dollar-icon small-dollar">$</span>
-                <span class="badge rounded-pill text-bg-light service-chip">PayPal</span>
-                <strong>{{ payment_prompt.paypal_account }}</strong>
-            </div>
-        </div>
-        <div class="payment-deadline">
-            <span class="badge rounded-pill text-bg-{{ payment_prompt.tone }} mb-2">{{ payment_prompt.status }}</span>
-            <strong>{{ payment_prompt.deadline }}</strong>
-            <small>
-                {% if payment_prompt.days_left >= 0 %}
-                    {{ payment_prompt.days_left }} day(s) left
+        {% if student %}
+        <div class="student-hero">
+            <div class="avatar-circle">
+                {% if student.profile_photo %}
+                <img src="{{ student.profile_photo }}" alt="{{ student.full_name }}">
                 {% else %}
-                    {{ payment_prompt.days_left | abs }} day(s) overdue
+                <span>{{ student.initials }}</span>
                 {% endif %}
-            </small>
+            </div>
+            <div class="student-meta">
+                <div><strong>Admission:</strong> {{ student.admission_number }}</div>
+                <div><strong>Portal ID:</strong> {{ student.portal_student_id }}</div>
+                <div><strong>Class:</strong> {{ student.class_name }} {{ student.stream }}</div>
+                <div><strong>School Email:</strong> {{ student.school_email }}</div>
+                <div><strong>GPA:</strong> {{ performance.gpa }}</div>
+            </div>
         </div>
-    </div>
-</section>
+        {% if students|length > 1 %}
+        <div class="student-switcher">
+            {% for item in students %}
+            <a href="{{ url_for('main.dashboard', student_id=item.id) }}" class="student-pill {% if student.id == item.id %}active{% endif %}">{{ item.full_name }}</a>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% else %}
+        <p class="muted mb-0">Link a parent to a student or add a student profile to start seeing dashboard insights.</p>
+        {% endif %}
+    </article>
 
-<section class="row g-4 mb-4">
-    <div class="col-xl-4">
-        <div class="content-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <p class="eyebrow mb-1">Planner</p>
-                    <h4 class="mb-0">Academic Calendar</h4>
-                </div>
-                <span class="badge rounded-pill text-bg-light service-chip">24h reminder</span>
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Fees</p>
+                <h4 class="mb-0">Fee Status</h4>
             </div>
-            {% if current_user.role == 'student' %}
-            <form method="POST" action="{{ url_for('main.add_activity') }}" novalidate>
-                {{ activity_form.hidden_tag() }}
-                <div class="mb-3">
-                    {{ activity_form.title.label(class="form-label") }}
-                    {{ activity_form.title(class="form-control") }}
-                </div>
-                <div class="mb-3">
-                    {{ activity_form.category.label(class="form-label") }}
-                    {{ activity_form.category(class="form-select") }}
-                </div>
-                <div class="mb-3">
-                    {{ activity_form.start_time.label(class="form-label") }}
-                    {{ activity_form.start_time(class="form-control") }}
-                </div>
-                <div class="mb-3">
-                    {{ activity_form.description.label(class="form-label") }}
-                    {{ activity_form.description(class="form-control") }}
-                </div>
-                {{ activity_form.submit(class="btn btn-primary w-100") }}
-            </form>
-            {% else %}
-            <p class="text-body-secondary mb-0">
-                Parents can view the student calendar and reminders here, but only students can add or edit activities.
-            </p>
-            {% endif %}
         </div>
-    </div>
-    <div class="col-xl-4">
-        <div class="content-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <p class="eyebrow mb-1">Reminder Center</p>
-                    <h4 class="mb-0">Due Within 24 Hours</h4>
-                </div>
-                <span class="dollar-icon small-dollar">!</span>
-            </div>
-            {% if activity_reminders %}
-            <div class="notification-stack">
-                {% for reminder in activity_reminders %}
-                <div class="reminder-card">
-                    <span class="badge rounded-pill text-bg-warning mb-2">{{ reminder.category }}</span>
-                    <strong>{{ reminder.title }}</strong>
-                    <small>{{ reminder.start_label }}</small>
-                    <p class="mb-0">{{ reminder.message }}</p>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="text-body-secondary mb-0">
-                No activities are currently within the 24-hour reminder window.
-            </p>
-            {% endif %}
+        {% if fees %}
+        <div class="status-card">
+            <div class="status-row"><span>Status</span><strong>{{ fees.icon }} {{ fees.status }}</strong></div>
+            <div class="status-row"><span>Total</span><strong>KES {{ "%.2f"|format(fees.total) }}</strong></div>
+            <div class="status-row"><span>Paid</span><strong>KES {{ "%.2f"|format(fees.paid) }}</strong></div>
+            <div class="status-row"><span>Balance</span><strong>KES {{ "%.2f"|format(fees.balance) }}</strong></div>
         </div>
-    </div>
-    <div class="col-xl-4">
-        <div class="content-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <p class="eyebrow mb-1">Upcoming Events</p>
-                    <h4 class="mb-0">Calendar Timeline</h4>
-                </div>
-                <span class="badge rounded-pill text-bg-primary">{{ calendar_items|length }} items</span>
-            </div>
-            {% if calendar_items %}
-            <div class="calendar-list">
-                {% for item in calendar_items %}
-                <div class="calendar-item">
-                    <div class="calendar-dot {{ item.category }}"></div>
-                    <div class="calendar-body">
-                        <div class="d-flex justify-content-between gap-3 flex-wrap">
-                            <div>
-                                <strong>{{ item.title }}</strong>
-                                <div class="calendar-meta">
-                                    {{ item.category.replace('_', ' ')|title }} | {{ item.date_label }} | {{ item.time_label }}
-                                </div>
-                            </div>
-                            <div class="calendar-time">
-                                {% if item.is_upcoming %}
-                                    {{ item.hours_until }}h left
-                                {% else %}
-                                    Completed
-                                {% endif %}
-                            </div>
-                        </div>
-                        <p class="mb-2">{{ item.description }}</p>
-                        <small class="text-body-secondary">Reminder: {{ item.reminder_label }}</small>
-                        {% if current_user.role == 'student' %}
-                        <form method="POST" action="{{ url_for('main.delete_activity', activity_id=item.id) }}" class="mt-2">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
-                        </form>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% else %}
-            <p class="text-body-secondary mb-0">
-                No calendar activities added yet. Start by saving a lecture, exam, meeting, or club event.
-            </p>
-            {% endif %}
-        </div>
-    </div>
-</section>
+        {% else %}
+        <p class="muted mb-0">No fee structure has been created for this learner yet.</p>
+        {% endif %}
+    </article>
 
-<section class="row g-4">
-    <div class="col-xl-6">
-        <div class="content-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Academic Performance Over Time</h4>
-                <span class="badge rounded-pill text-bg-primary">Chart.js</span>
+    <article class="glass-card wide-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Performance</p>
+                <h4 class="mb-0">Academic Trend</h4>
             </div>
-            <canvas id="performanceChart" height="120"></canvas>
+            <span class="soft-badge">Chart.js</span>
         </div>
-    </div>
-    <div class="col-xl-3">
-        <div class="content-card h-100">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">GPA Per Semester</h4>
-                <span class="badge rounded-pill text-bg-success">Bar View</span>
+        <canvas id="trendChart" height="120"></canvas>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Grades</p>
+                <h4 class="mb-0">Latest Results</h4>
             </div>
-            <canvas id="gpaChart" height="120"></canvas>
         </div>
-    </div>
-    <div class="col-xl-3">
-        <div class="content-card h-100">
-            <h4>Low Grade Notifications</h4>
-            {% if alerts %}
-                <div class="notification-stack">
-                    {% for alert in alerts %}
-                    <div class="notification-item">
-                        <strong>{{ alert.unit.unit_code }}</strong>
-                        <span>{{ alert.unit.unit_name }}</span>
-                        <small>{{ alert.grade }} in {{ alert.semester }} ({{ alert.academic_year }})</small>
-                    </div>
-                    {% endfor %}
+        <div class="mini-list">
+            {% for result in result_cards %}
+            <div class="mini-item">
+                <div>
+                    <strong>{{ result.subject_code }}</strong>
+                    <small>{{ result.term }} {{ result.academic_year }}</small>
                 </div>
+                <div class="score-chip">{{ result.status_icon }} {{ result.grade }} | {{ result.total_score }}</div>
+            </div>
             {% else %}
-                <p class="text-body-secondary mb-0">No low-grade alerts. Keep up the good work.</p>
-            {% endif %}
+            <p class="muted mb-0">No results recorded yet.</p>
+            {% endfor %}
         </div>
-    </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Alerts</p>
+                <h4 class="mb-0">Low Grades</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for result in low_grade_alerts %}
+            <div class="alert-tile">{{ result.status_icon }} {{ result.subject }} needs attention at {{ result.total_score }} marks.</div>
+            {% else %}
+            <p class="muted mb-0">No low-grade alerts for the current view.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Activities</p>
+                <h4 class="mb-0">Co-Curricular</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for activity in upcoming_activities %}
+            <div class="activity-tile">
+                <strong>⚽ {{ activity.activity_name }}</strong>
+                <small>{{ activity.activity_type }} | {{ activity.participation_level }} | 📈 {{ activity.progress_percent }}%</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No activities logged yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Achievements</p>
+                <h4 class="mb-0">Highlights</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for achievement in latest_achievements %}
+            <div class="achievement-tile">
+                <strong>🏆 {{ achievement.title }}</strong>
+                <small>{{ achievement.category }} | {{ achievement.achievement_date.strftime('%d %b %Y') }}</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No achievements uploaded yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Parent Contact</p>
+                <h4 class="mb-0">Linked parent details</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for parent in parent_contacts %}
+            <div class="message-card">
+                <strong>{{ parent.full_name }}</strong>
+                <small>Email: {{ parent.email or 'Not added' }}</small>
+                <small>Phone: {{ parent.phone_number or 'Not added' }}</small>
+                <small>Gender: {{ parent.gender or 'Not added' }}</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No parent contact is linked to this student yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Notifications</p>
+                <h4 class="mb-0">Inbox Preview</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for message in recent_messages %}
+            <div class="message-tile">
+                <strong>{{ message.category }}</strong>
+                <small>{{ message.subject }}</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No messages yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card wide-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Subject View</p>
+                <h4 class="mb-0">Average by Subject</h4>
+            </div>
+        </div>
+        <canvas id="subjectChart" height="120"></canvas>
+    </article>
 </section>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    window.performanceChartData = {
-        labels: {{ timeline_labels | tojson }},
-        values: {{ timeline_values | tojson }}
-    };
-    window.gpaChartData = {
-        labels: {{ timeline_labels | tojson }},
-        values: {{ timeline_values | tojson }}
-    };
+window.trendChartData = {
+    labels: {{ trend_labels|tojson }},
+    values: {{ trend_values|tojson }}
+};
+window.subjectChartData = {
+    labels: {{ subject_labels|tojson }},
+    values: {{ subject_values|tojson }}
+};
 </script>
 {% endblock %}

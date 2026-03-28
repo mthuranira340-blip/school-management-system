@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block page_title %}Messages{% endblock %}
+{% block content %}
+<section class="two-column">
+    <article class="glass-card">
+        <p class="eyebrow">Compose</p>
+        <h3>Send notice or update</h3>
+        <form method="POST" novalidate class="form-stack">
+            {{ form.hidden_tag() }}
+            <div class="form-grid">
+                <div>{{ form.receiver_id.label(class="form-label") }}{{ form.receiver_id(class="form-select") }}</div>
+                <div>{{ form.student_id.label(class="form-label") }}{{ form.student_id(class="form-select") }}</div>
+                <div>{{ form.category.label(class="form-label") }}{{ form.category(class="form-select") }}</div>
+                <div>{{ form.subject.label(class="form-label") }}{{ form.subject(class="form-control") }}</div>
+            </div>
+            <div>{{ form.body.label(class="form-label") }}{{ form.body(class="form-control", rows="5") }}</div>
+            {{ form.submit(class="btn btn-primary") }}
+        </form>
+    </article>
+
+    <article class="glass-card">
+        <p class="eyebrow">Inbox</p>
+        <h3>Notifications</h3>
+        <div class="message-list">
+            {% for item in inbox %}
+            <div class="message-card">
+                <strong>{{ item.category }} · {{ item.subject }}</strong>
+                <small>From {{ item.sender.full_name }} on {{ item.sent_at.strftime('%d %b %Y %H:%M') }}</small>
+                {% if item.student_profile %}<small>Student: {{ item.student_profile.full_name }}</small>{% endif %}
+                <p class="mb-0">{{ item.body }}</p>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No messages in the inbox.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="glass-card mt-4">
+    <p class="eyebrow">Sent Messages</p>
+    <h3>Recent outbound communication</h3>
+    <div class="message-list">
+        {% for item in sent %}
+        <div class="message-card sent">
+            <strong>{{ item.subject }}</strong>
+            <small>To {{ item.receiver.full_name }} · {{ item.sent_at.strftime('%d %b %Y %H:%M') }}</small>
+            <p class="mb-0">{{ item.body }}</p>
+        </div>
+        {% else %}
+        <p class="muted mb-0">You have not sent any messages yet.</p>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

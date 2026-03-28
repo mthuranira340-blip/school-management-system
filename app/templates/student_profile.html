@@ -1,0 +1,198 @@
+{% extends "base.html" %}
+{% block page_title %}Student Profile{% endblock %}
+{% block content %}
+<section class="hero-card">
+    <div class="student-hero">
+        <div class="avatar-circle large">
+            {% if student.profile_photo %}
+            <img src="{{ student.profile_photo }}" alt="{{ student.full_name }}">
+            {% else %}
+            <span>{{ student.initials }}</span>
+            {% endif %}
+        </div>
+        <div class="student-meta">
+            <p class="eyebrow">Student Profile</p>
+            <h3>{{ student.full_name }}</h3>
+            <div><strong>Admission:</strong> {{ student.admission_number }}</div>
+            <div><strong>Portal ID:</strong> {{ student.portal_student_id }}</div>
+            <div><strong>Class:</strong> {{ student.class_name }} {{ student.stream }}</div>
+            <div><strong>School Email:</strong> {{ student.school_email }}</div>
+        </div>
+    </div>
+    <div class="hero-badge">
+        <span>{{ performance.status_icon }}</span>
+        <strong>{{ performance.grade }}</strong>
+        <small>Avg {{ performance.average }} | GPA {{ performance.gpa }}</small>
+    </div>
+</section>
+
+<section class="stats-grid">
+    <article class="glass-card stat-card"><span>📘</span><strong>{{ results|length }}</strong><small>Results</small></article>
+    <article class="glass-card stat-card"><span>⚽</span><strong>{{ student.activities|length }}</strong><small>Activities</small></article>
+    <article class="glass-card stat-card"><span>🏆</span><strong>{{ student.achievements|length }}</strong><small>Achievements</small></article>
+    <article class="glass-card stat-card"><span>{{ fee_data.icon }}</span><strong>{{ fee_data.status }}</strong><small>Fee status</small></article>
+</section>
+
+<section class="content-grid">
+    <article class="glass-card wide-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Report Card</p>
+                <h4 class="mb-0">Subject results</h4>
+            </div>
+            <a href="{{ url_for('main.export_pdf', student_id=student.id) }}" class="btn btn-outline-dark btn-sm">Export PDF</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>CAT</th>
+                        <th>Exam</th>
+                        <th>Total</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in results %}
+                    <tr>
+                        <td>{{ row.subject }}</td>
+                        <td>{{ row.cat_score }}</td>
+                        <td>{{ row.exam_score }}</td>
+                        <td>{{ row.total_score }}</td>
+                        <td>{{ row.status_icon }} {{ row.grade }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5">No results available.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Fees</p>
+                <h4 class="mb-0">Finance summary</h4>
+            </div>
+        </div>
+        <div class="status-card">
+            <div class="status-row"><span>Status</span><strong>{{ fee_data.icon }} {{ fee_data.status }}</strong></div>
+            <div class="status-row"><span>Total</span><strong>KES {{ "%.2f"|format(fee_data.total) }}</strong></div>
+            <div class="status-row"><span>Paid</span><strong>KES {{ "%.2f"|format(fee_data.paid) }}</strong></div>
+            <div class="status-row"><span>Balance</span><strong>KES {{ "%.2f"|format(fee_data.balance) }}</strong></div>
+        </div>
+    </article>
+
+    <article class="glass-card wide-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Trend</p>
+                <h4 class="mb-0">Performance over time</h4>
+            </div>
+        </div>
+        <canvas id="trendChart" height="120"></canvas>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Parent Details</p>
+                <h4 class="mb-0">Accessible contact info</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for parent in parent_contacts %}
+            <div class="message-card">
+                <strong>{{ parent.full_name }}</strong>
+                <small>Email: {{ parent.email or 'Not added' }}</small>
+                <small>Phone: {{ parent.phone_number or 'Not added' }}</small>
+                <small>Gender: {{ parent.gender or 'Not added' }}</small>
+                <small>Portal access uses: {{ student.full_name }} + {{ student.portal_student_id }}</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No parent contact is linked to this student.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Activities</p>
+                <h4 class="mb-0">Co-curricular progress</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for item in student.activities %}
+            <div class="activity-tile"><strong>⚽ {{ item.activity_name }}</strong><small>{{ item.activity_type }} | {{ item.participation_level }} | 📈 {{ item.progress_percent }}%</small></div>
+            {% else %}
+            <p class="muted mb-0">No activity data yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Achievements</p>
+                <h4 class="mb-0">Uploaded highlights</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for item in student.achievements %}
+            <div class="achievement-tile"><strong>🏆 {{ item.title }}</strong><small>{{ item.category }} | {{ item.achievement_date.strftime('%d %b %Y') }}</small></div>
+            {% else %}
+            <p class="muted mb-0">No achievements yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card wide-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Payments</p>
+                <h4 class="mb-0">Payment history</h4>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Amount</th>
+                        <th>Reference</th>
+                        <th>Recorded By</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in payments %}
+                    <tr>
+                        <td>{{ payment.payment_date.strftime('%d %b %Y') }}</td>
+                        <td>KES {{ "%.2f"|format(payment.amount_paid) }}</td>
+                        <td>{{ payment.reference }}</td>
+                        <td>{{ payment.recorded_by }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">No payments recorded yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+window.trendChartData = {
+    labels: {{ trend_labels|tojson }},
+    values: {{ trend_values|tojson }}
+};
+window.subjectChartData = {
+    labels: {{ subject_labels|tojson }},
+    values: {{ subject_values|tojson }}
+};
+</script>
+{% endblock %}

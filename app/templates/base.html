@@ -1,53 +1,52 @@
 <!doctype html>
-<html lang="en" data-bs-theme="light">
+<html lang="en">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>University Academic Tracker</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Greenfield High School Management System</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Sora:wght@500;600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <div class="app-shell">
+    <div class="page-shell">
         {% if current_user.is_authenticated %}
-        <aside class="sidebar">
+        <aside class="sidebar" id="sidebar">
             <div>
-                <div class="brand-card">
-                    <p class="eyebrow">Academic Suite</p>
-                    <h1>University Academic Tracker</h1>
-                    <p class="small text-body-secondary mb-0">
-                        {{ current_user.role|title }} Portal
-                    </p>
+                <div class="brand-panel">
+                    <p class="eyebrow">School Hub</p>
+                    <h1>Greenfield High</h1>
+                    <p class="muted mb-0">{{ current_user.role|title }} dashboard</p>
                 </div>
-                <nav class="nav flex-column gap-2 mt-4">
-                    <a class="nav-link {% if request.endpoint == 'main.dashboard' %}active{% endif %}" href="{{ url_for('main.dashboard') }}">Dashboard</a>
-                    {% if current_user.role == 'student' %}
-                    <a class="nav-link {% if 'units' in request.endpoint %}active{% endif %}" href="{{ url_for('main.units') }}">Units</a>
+                <nav class="nav-stack mt-4">
+                    <a href="{{ url_for('main.dashboard') }}" class="{% if request.endpoint == 'main.dashboard' %}active{% endif %}">Overview</a>
+                    {% if current_user.role in ['admin', 'teacher'] %}
+                    <a href="{{ url_for('main.students') }}" class="{% if request.endpoint == 'main.students' %}active{% endif %}">Students</a>
+                    <a href="{{ url_for('main.academics') }}" class="{% if request.endpoint == 'main.academics' %}active{% endif %}">Academics</a>
                     {% endif %}
-                    <a class="nav-link {% if 'grades' in request.endpoint %}active{% endif %}" href="{{ url_for('main.grades') }}">Grades</a>
-                    <a class="nav-link {% if request.endpoint == 'main.assistant' %}active{% endif %}" href="{{ url_for('main.assistant') }}">AI Assistant</a>
-                    <a class="nav-link" href="{{ url_for('main.export_pdf') }}">Export PDF</a>
+                    <a href="{{ url_for('main.fees') }}" class="{% if request.endpoint == 'main.fees' %}active{% endif %}">Fees</a>
+                    <a href="{{ url_for('main.messages') }}" class="{% if request.endpoint == 'main.messages' %}active{% endif %}">Messages</a>
                 </nav>
             </div>
-            <div class="sidebar-footer">
-                <button class="btn btn-outline-secondary w-100 mb-2" id="themeToggle" type="button">Toggle Dark Mode</button>
-                <a class="btn btn-primary w-100" href="{{ url_for('auth.logout') }}">Logout</a>
+            <div class="sidebar-foot">
+                <div class="identity-chip">
+                    <span>{{ current_user.full_name }}</span>
+                    <small>{{ current_user.school_email }}</small>
+                </div>
+                <a href="{{ url_for('auth.logout') }}" class="btn btn-dark w-100 mt-3">Logout</a>
             </div>
         </aside>
         {% endif %}
 
-        <main class="main-content {% if not current_user.is_authenticated %}full-width{% endif %}">
+        <main class="main-area {% if not current_user.is_authenticated %}auth-area{% endif %}">
             {% if current_user.is_authenticated %}
             <div class="topbar">
+                <button class="sidebar-toggle btn btn-outline-dark" id="sidebarToggle" type="button">Menu</button>
                 <div>
-                    <p class="eyebrow mb-1">Welcome back</p>
-                    <h2 class="mb-0">{{ current_user.username }}</h2>
-                </div>
-                <div class="badge rounded-pill text-bg-light px-3 py-2 shadow-sm">
-                    {{ current_user.email }}
+                    <p class="eyebrow mb-1">Live School Operations</p>
+                    <h2 class="page-title">{% block page_title %}Dashboard{% endblock %}</h2>
                 </div>
             </div>
             {% endif %}

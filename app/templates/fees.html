@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block page_title %}Fees{% endblock %}
+{% block content %}
+{% if structure_form %}
+<section class="two-column">
+    <article class="glass-card">
+        <p class="eyebrow">Fee Structure</p>
+        <h3>Set fees</h3>
+        <form method="POST" novalidate class="form-stack">
+            {{ structure_form.hidden_tag() }}
+            <div class="form-grid">
+                <div>{{ structure_form.student_id.label(class="form-label") }}{{ structure_form.student_id(class="form-select") }}</div>
+                <div>{{ structure_form.term.label(class="form-label") }}{{ structure_form.term(class="form-select") }}</div>
+                <div>{{ structure_form.academic_year.label(class="form-label") }}{{ structure_form.academic_year(class="form-control") }}</div>
+                <div>{{ structure_form.total_amount.label(class="form-label") }}{{ structure_form.total_amount(class="form-control") }}</div>
+                <div>{{ structure_form.due_date.label(class="form-label") }}{{ structure_form.due_date(class="form-control") }}</div>
+            </div>
+            {{ structure_form.submit(class="btn btn-primary") }}
+        </form>
+    </article>
+
+    <article class="glass-card">
+        <p class="eyebrow">Payments</p>
+        <h3>Record payment</h3>
+        <form method="POST" novalidate class="form-stack">
+            {{ payment_form.hidden_tag() }}
+            <div class="form-grid">
+                <div>{{ payment_form.student_id.label(class="form-label") }}{{ payment_form.student_id(class="form-select") }}</div>
+                <div>{{ payment_form.fee_structure_id.label(class="form-label") }}{{ payment_form.fee_structure_id(class="form-select") }}</div>
+                <div>{{ payment_form.amount_paid.label(class="form-label") }}{{ payment_form.amount_paid(class="form-control") }}</div>
+                <div>{{ payment_form.payment_date.label(class="form-label") }}{{ payment_form.payment_date(class="form-control") }}</div>
+                <div>{{ payment_form.reference.label(class="form-label") }}{{ payment_form.reference(class="form-control") }}</div>
+            </div>
+            {{ payment_form.submit(class="btn btn-primary") }}
+        </form>
+    </article>
+</section>
+{% endif %}
+
+<section class="two-column {% if structure_form %}mt-4{% endif %}">
+    <article class="glass-card">
+        <p class="eyebrow">Student Fee Summary</p>
+        <h3>Balances and status</h3>
+        <div class="mini-list">
+            {% for card in fee_cards %}
+            <div class="fee-tile">
+                <div>
+                    <strong>{{ card.student.full_name }}</strong>
+                    <small>{% if card.latest_fee %}{{ card.latest_fee.term }} {{ card.latest_fee.academic_year }}{% else %}No fee structure{% endif %}</small>
+                </div>
+                <div class="text-end">
+                    <strong>{{ card.snapshot.icon }} {{ card.snapshot.status }}</strong>
+                    <small>Balance: KES {{ "%.2f"|format(card.snapshot.balance) }}</small>
+                </div>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No fee data available.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <p class="eyebrow">Payment History</p>
+        <h3>Recent payments</h3>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Ref</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in recent_payments %}
+                    <tr>
+                        <td>{{ payment.student.full_name }}</td>
+                        <td>KES {{ "%.2f"|format(payment.amount_paid) }}</td>
+                        <td>{{ payment.payment_date.strftime('%d %b %Y') }}</td>
+                        <td>{{ payment.reference }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">No payments recorded yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>
+{% endblock %}

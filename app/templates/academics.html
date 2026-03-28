@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block page_title %}Academics{% endblock %}
+{% block content %}
+<section class="two-column">
+    <article class="glass-card">
+        <p class="eyebrow">Subjects</p>
+        <h3>Add subject</h3>
+        <form method="POST" novalidate class="form-stack">
+            {{ subject_form.hidden_tag() }}
+            <div>{{ subject_form.name.label(class="form-label") }}{{ subject_form.name(class="form-control") }}</div>
+            <div>{{ subject_form.code.label(class="form-label") }}{{ subject_form.code(class="form-control") }}</div>
+            {{ subject_form.submit(class="btn btn-primary") }}
+        </form>
+        <div class="chip-row mt-4">
+            {% for subject in subjects %}
+            <span class="soft-badge">{{ subject.code }} · {{ subject.name }}</span>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <p class="eyebrow">Results</p>
+        <h3>Record marks</h3>
+        <form method="POST" novalidate class="form-stack">
+            {{ result_form.hidden_tag() }}
+            <div class="form-grid">
+                <div>{{ result_form.student_id.label(class="form-label") }}{{ result_form.student_id(class="form-select") }}</div>
+                <div>{{ result_form.subject_id.label(class="form-label") }}{{ result_form.subject_id(class="form-select") }}</div>
+                <div>{{ result_form.term.label(class="form-label") }}{{ result_form.term(class="form-select") }}</div>
+                <div>{{ result_form.academic_year.label(class="form-label") }}{{ result_form.academic_year(class="form-control") }}</div>
+                <div>{{ result_form.cat_score.label(class="form-label") }}{{ result_form.cat_score(class="form-control") }}</div>
+                <div>{{ result_form.exam_score.label(class="form-label") }}{{ result_form.exam_score(class="form-control") }}</div>
+            </div>
+            {{ result_form.submit(class="btn btn-primary") }}
+        </form>
+    </article>
+</section>
+
+<section class="two-column mt-4">
+    <article class="glass-card">
+        <p class="eyebrow">Activities</p>
+        <h3>Add co-curricular progress</h3>
+        <form method="POST" novalidate class="form-stack">
+            {{ activity_form.hidden_tag() }}
+            <div class="form-grid">
+                <div>{{ activity_form.student_id.label(class="form-label") }}{{ activity_form.student_id(class="form-select") }}</div>
+                <div>{{ activity_form.activity_name.label(class="form-label") }}{{ activity_form.activity_name(class="form-control") }}</div>
+                <div>{{ activity_form.activity_type.label(class="form-label") }}{{ activity_form.activity_type(class="form-select") }}</div>
+                <div>{{ activity_form.participation_level.label(class="form-label") }}{{ activity_form.participation_level(class="form-select") }}</div>
+                <div>{{ activity_form.progress_percent.label(class="form-label") }}{{ activity_form.progress_percent(class="form-control") }}</div>
+            </div>
+            <div>{{ activity_form.progress_note.label(class="form-label") }}{{ activity_form.progress_note(class="form-control", rows="3") }}</div>
+            {{ activity_form.submit(class="btn btn-primary") }}
+        </form>
+    </article>
+
+    <article class="glass-card">
+        <p class="eyebrow">Achievements</p>
+        <h3>Upload achievement</h3>
+        <form method="POST" novalidate class="form-stack">
+            {{ achievement_form.hidden_tag() }}
+            <div class="form-grid">
+                <div>{{ achievement_form.student_id.label(class="form-label") }}{{ achievement_form.student_id(class="form-select") }}</div>
+                <div>{{ achievement_form.title.label(class="form-label") }}{{ achievement_form.title(class="form-control") }}</div>
+                <div>{{ achievement_form.category.label(class="form-label") }}{{ achievement_form.category(class="form-control") }}</div>
+                <div>{{ achievement_form.achievement_date.label(class="form-label") }}{{ achievement_form.achievement_date(class="form-control") }}</div>
+            </div>
+            <div>{{ achievement_form.description.label(class="form-label") }}{{ achievement_form.description(class="form-control", rows="3") }}</div>
+            {{ achievement_form.submit(class="btn btn-primary") }}
+        </form>
+    </article>
+</section>
+
+<section class="two-column mt-4">
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Recent Results</p>
+                <h3 class="mb-0">Performance records</h3>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table align-middle">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Term</th>
+                        <th>Total</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in result_rows %}
+                    <tr>
+                        <td>{{ row.subject }}</td>
+                        <td>{{ row.term }} {{ row.academic_year }}</td>
+                        <td>{{ row.total_score }}</td>
+                        <td>{{ row.status_icon }} {{ row.grade }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="4">No results added yet.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Latest Student Growth</p>
+                <h3 class="mb-0">Activities and achievements</h3>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for activity in recent_activities %}
+            <div class="activity-tile"><strong>⚽ {{ activity.student.full_name }}</strong><small>{{ activity.activity_name }} | {{ activity.progress_percent }}%</small></div>
+            {% endfor %}
+            {% for achievement in recent_achievements %}
+            <div class="achievement-tile"><strong>🏆 {{ achievement.student.full_name }}</strong><small>{{ achievement.title }}</small></div>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

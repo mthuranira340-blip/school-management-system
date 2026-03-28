@@ -1,136 +1,157 @@
 from flask_wtf import FlaskForm
-from wtforms import DateTimeLocalField, PasswordField, SelectField, StringField, SubmitField, TextAreaField
-from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
+from wtforms import DateField, DecimalField, IntegerField, PasswordField, SelectField, StringField, SubmitField, TextAreaField
+from wtforms.validators import DataRequired, Email, EqualTo, Length, NumberRange, Optional, ValidationError
 
-from .models import Unit, User
+from .models import Student, Subject, User
 
 
-GRADE_CHOICES = [
-    ("A", "A"),
-    ("B+", "B+"),
-    ("B", "B"),
-    ("C+", "C+"),
-    ("C", "C"),
-    ("D", "D"),
-    ("E", "E"),
+ROLE_CHOICES = [("admin", "Admin"), ("teacher", "Teacher"), ("parent", "Parent")]
+TERM_CHOICES = [("Term 1", "Term 1"), ("Term 2", "Term 2"), ("Term 3", "Term 3")]
+CLASS_CHOICES = [(f"Form {level}", f"Form {level}") for level in range(1, 5)]
+STREAM_CHOICES = [("North", "North"), ("South", "South"), ("East", "East"), ("West", "West")]
+ACTIVITY_TYPES = [("Sports", "Sports"), ("Club", "Club"), ("Event", "Event")]
+PARTICIPATION_LEVELS = [("Beginner", "Beginner"), ("Active", "Active"), ("Excellent", "Excellent")]
+MESSAGE_CATEGORIES = [
+    ("Announcement", "Announcement"),
+    ("Weekend Travel", "Weekend Travel"),
+    ("Co-Curricular", "Co-Curricular"),
+    ("Fees", "Fees"),
+    ("Academic", "Academic"),
 ]
 
 
 class RegistrationForm(FlaskForm):
+    full_name = StringField("Full name", validators=[DataRequired(), Length(min=3, max=120)])
     username = StringField("Username", validators=[DataRequired(), Length(min=3, max=80)])
-    email = StringField("Email", validators=[DataRequired(), Email()])
-    password = PasswordField("Password", validators=[DataRequired(), Length(min=6)])
+    email = StringField("Personal email", validators=[DataRequired(), Email()])
+    phone_number = StringField("Phone number", validators=[Optional(), Length(max=30)])
+    gender = SelectField(
+        "Gender",
+        choices=[("", "Select gender"), ("Female", "Female"), ("Male", "Male"), ("Other", "Other")],
+        validators=[Optional()],
+    )
+    password = PasswordField("Password", validators=[DataRequired(), Length(min=6, max=128)])
     confirm_password = PasswordField(
-        "Confirm Password",
+        "Confirm password",
         validators=[DataRequired(), EqualTo("password", message="Passwords must match.")],
     )
-    role = SelectField(
-        "Role",
-        choices=[("student", "Student"), ("parent", "Parent")],
-        validators=[DataRequired()],
-    )
-    linked_student_id = SelectField("Link To Student", coerce=int, choices=[])
+    role = SelectField("Role", choices=ROLE_CHOICES, validators=[DataRequired()])
+    linked_student_id = SelectField("Linked student", coerce=int, choices=[], validators=[Optional()])
     submit = SubmitField("Create account")
 
     def validate_email(self, field):
-        if User.query.filter_by(email=field.data.lower()).first():
+        if User.query.filter_by(email=field.data.strip().lower()).first():
             raise ValidationError("That email is already registered.")
+
+    def validate_username(self, field):
+        if User.query.filter_by(username=field.data.strip().lower()).first():
+            raise ValidationError("That username is already taken.")
 
     def validate_linked_student_id(self, field):
         if self.role.data == "parent" and field.data == 0:
-            raise ValidationError("Please link this parent account to a student.")
+            raise ValidationError("Please link the parent account to a student.")
 
 
 class LoginForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired(), Email()])
     password = PasswordField("Password", validators=[DataRequired()])
-    submit = SubmitField("Login")
+    submit = SubmitField("Sign in")
 
 
-class UnitForm(FlaskForm):
-    unit_name = StringField("Unit Name", validators=[DataRequired(), Length(max=120)])
-    unit_code = StringField("Unit Code", validators=[DataRequired(), Length(max=30)])
-    course = StringField("Course", validators=[DataRequired(), Length(max=120)])
-    level_of_study = SelectField(
-        "Level of Study",
-        choices=[
-            ("Year 1", "Year 1"),
-            ("Year 2", "Year 2"),
-            ("Year 3", "Year 3"),
-            ("Year 4", "Year 4"),
-            ("Year 5", "Year 5"),
-        ],
-        validators=[DataRequired()],
-    )
-    submit = SubmitField("Save Unit")
+class ParentPortalLoginForm(FlaskForm):
+    student_name = StringField("Student name", validators=[DataRequired(), Length(min=3, max=160)])
+    portal_student_id = StringField("Student portal ID", validators=[DataRequired(), Length(min=4, max=40)])
+    submit = SubmitField("Open parent portal")
+
+
+class StudentForm(FlaskForm):
+    first_name = StringField("First name", validators=[DataRequired(), Length(max=80)])
+    last_name = StringField("Last name", validators=[DataRequired(), Length(max=80)])
+    admission_number = StringField("Admission number", validators=[DataRequired(), Length(max=30)])
+    class_name = SelectField("Class", choices=CLASS_CHOICES, validators=[DataRequired()])
+    stream = SelectField("Stream", choices=STREAM_CHOICES, validators=[DataRequired()])
+    profile_photo = StringField("Profile photo URL", validators=[Optional(), Length(max=255)])
+    parent_id = SelectField("Parent account", coerce=int, choices=[], validators=[Optional()])
+    submit = SubmitField("Save student")
+
+    def __init__(self, original_admission=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.original_admission = original_admission
+
+    def validate_admission_number(self, field):
+        value = field.data.strip().upper()
+        existing = Student.query.filter_by(admission_number=value).first()
+        if existing and value != self.original_admission:
+            raise ValidationError("That admission number already exists.")
+
+
+class SubjectForm(FlaskForm):
+    name = StringField("Subject name", validators=[DataRequired(), Length(max=80)])
+    code = StringField("Subject code", validators=[DataRequired(), Length(max=20)])
+    submit = SubmitField("Save subject")
 
     def __init__(self, original_code=None, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.original_code = original_code
 
-    def validate_unit_code(self, field):
-        existing = Unit.query.filter_by(unit_code=field.data.upper()).first()
-        if existing and field.data.upper() != self.original_code:
-            raise ValidationError("That unit code already exists.")
+    def validate_code(self, field):
+        value = field.data.strip().upper()
+        existing = Subject.query.filter_by(code=value).first()
+        if existing and value != self.original_code:
+            raise ValidationError("That subject code already exists.")
 
 
-class GradeForm(FlaskForm):
-    user_id = SelectField("Student", coerce=int, choices=[], validators=[DataRequired()])
-    unit_id = SelectField("Unit", coerce=int, choices=[], validators=[DataRequired()])
-    grade = SelectField("Grade", choices=GRADE_CHOICES, validators=[DataRequired()])
-    semester = SelectField(
-        "Semester",
-        choices=[("Semester 1", "Semester 1"), ("Semester 2", "Semester 2"), ("Semester 3", "Semester 3")],
-        validators=[DataRequired()],
-    )
-    academic_year = StringField(
-        "Academic Year",
-        validators=[DataRequired(), Length(min=4, max=20)],
-        render_kw={"placeholder": "2025/2026"},
-    )
-    submit = SubmitField("Save Grade")
-
-
-class AssistantForm(FlaskForm):
-    unit_id = SelectField("Unit", coerce=int, choices=[], validators=[DataRequired()])
-    assignment_type = SelectField(
-        "Assignment Type",
-        choices=[
-            ("essay", "Essay"),
-            ("research", "Research"),
-            ("discussion", "Discussion"),
-            ("problem_set", "Problem Set"),
-            ("revision", "Revision"),
-        ],
-        validators=[DataRequired()],
-    )
-    question = TextAreaField(
-        "What do you need help with?",
-        validators=[DataRequired(), Length(min=10, max=1000)],
-        render_kw={"rows": 6, "placeholder": "Example: Help me outline a networking assignment and give me revision notes."},
-    )
-    submit = SubmitField("Ask AI Assistant")
+class ResultForm(FlaskForm):
+    student_id = SelectField("Student", coerce=int, choices=[], validators=[DataRequired()])
+    subject_id = SelectField("Subject", coerce=int, choices=[], validators=[DataRequired()])
+    term = SelectField("Term", choices=TERM_CHOICES, validators=[DataRequired()])
+    academic_year = StringField("Academic year", validators=[DataRequired(), Length(max=20)], render_kw={"placeholder": "2026"})
+    cat_score = DecimalField("CAT score", validators=[DataRequired(), NumberRange(min=0, max=40)], places=2)
+    exam_score = DecimalField("Exam score", validators=[DataRequired(), NumberRange(min=0, max=60)], places=2)
+    submit = SubmitField("Save result")
 
 
 class ActivityForm(FlaskForm):
-    title = StringField("Activity Title", validators=[DataRequired(), Length(min=3, max=150)])
-    category = SelectField(
-        "Category",
-        choices=[
-            ("academic", "Academic Calendar"),
-            ("co_curricular", "Co-Curricular Activity"),
-        ],
-        validators=[DataRequired()],
-    )
-    start_time = DateTimeLocalField(
-        "Activity Date & Time",
-        format="%Y-%m-%dT%H:%M",
-        validators=[DataRequired()],
-        render_kw={"class": "form-control"},
-    )
-    description = TextAreaField(
-        "Description",
-        validators=[Length(max=500)],
-        render_kw={"rows": 3, "placeholder": "Add details such as venue, agenda, lecturer, or team notes."},
-    )
-    submit = SubmitField("Save Activity")
+    student_id = SelectField("Student", coerce=int, choices=[], validators=[DataRequired()])
+    activity_name = StringField("Activity name", validators=[DataRequired(), Length(max=120)])
+    activity_type = SelectField("Activity type", choices=ACTIVITY_TYPES, validators=[DataRequired()])
+    participation_level = SelectField("Participation", choices=PARTICIPATION_LEVELS, validators=[DataRequired()])
+    progress_percent = IntegerField("Progress %", validators=[DataRequired(), NumberRange(min=0, max=100)])
+    progress_note = TextAreaField("Progress note", validators=[Optional(), Length(max=500)])
+    submit = SubmitField("Add activity")
+
+
+class AchievementForm(FlaskForm):
+    student_id = SelectField("Student", coerce=int, choices=[], validators=[DataRequired()])
+    title = StringField("Achievement title", validators=[DataRequired(), Length(max=120)])
+    category = StringField("Category", validators=[DataRequired(), Length(max=40)])
+    achievement_date = DateField("Date", validators=[DataRequired()])
+    description = TextAreaField("Description", validators=[DataRequired(), Length(max=500)])
+    submit = SubmitField("Add achievement")
+
+
+class FeeStructureForm(FlaskForm):
+    student_id = SelectField("Student", coerce=int, choices=[], validators=[DataRequired()])
+    term = SelectField("Term", choices=TERM_CHOICES, validators=[DataRequired()])
+    academic_year = StringField("Academic year", validators=[DataRequired(), Length(max=20)])
+    total_amount = DecimalField("Total fees", validators=[DataRequired(), NumberRange(min=0)], places=2)
+    due_date = DateField("Due date", validators=[DataRequired()])
+    submit = SubmitField("Save fee structure")
+
+
+class PaymentForm(FlaskForm):
+    student_id = SelectField("Student", coerce=int, choices=[], validators=[DataRequired()])
+    fee_structure_id = SelectField("Fee record", coerce=int, choices=[], validators=[DataRequired()])
+    amount_paid = DecimalField("Amount paid", validators=[DataRequired(), NumberRange(min=0)], places=2)
+    payment_date = DateField("Payment date", validators=[DataRequired()])
+    reference = StringField("Receipt/reference", validators=[DataRequired(), Length(max=80)])
+    submit = SubmitField("Record payment")
+
+
+class MessageForm(FlaskForm):
+    receiver_id = SelectField("Send to", coerce=int, choices=[], validators=[DataRequired()])
+    student_id = SelectField("Student", coerce=int, choices=[], validators=[Optional()])
+    category = SelectField("Category", choices=MESSAGE_CATEGORIES, validators=[DataRequired()])
+    subject = StringField("Subject", validators=[DataRequired(), Length(max=120)])
+    body = TextAreaField("Message", validators=[DataRequired(), Length(min=10, max=1000)])
+    submit = SubmitField("Send update")

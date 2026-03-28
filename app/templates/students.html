@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block page_title %}Students{% endblock %}
+{% block content %}
+<section class="two-column">
+    <article class="glass-card">
+        <p class="eyebrow">Add Student</p>
+        <h3>Student profile setup</h3>
+        <form method="POST" novalidate class="form-stack">
+            {{ form.hidden_tag() }}
+            <div class="form-grid">
+                <div>{{ form.first_name.label(class="form-label") }}{{ form.first_name(class="form-control") }}</div>
+                <div>{{ form.last_name.label(class="form-label") }}{{ form.last_name(class="form-control") }}</div>
+                <div>{{ form.admission_number.label(class="form-label") }}{{ form.admission_number(class="form-control") }}</div>
+                <div>{{ form.class_name.label(class="form-label") }}{{ form.class_name(class="form-select") }}</div>
+                <div>{{ form.stream.label(class="form-label") }}{{ form.stream(class="form-select") }}</div>
+                <div>{{ form.parent_id.label(class="form-label") }}{{ form.parent_id(class="form-select") }}</div>
+            </div>
+            <div>{{ form.profile_photo.label(class="form-label") }}{{ form.profile_photo(class="form-control", placeholder="https://...") }}</div>
+            {{ form.submit(class="btn btn-primary") }}
+        </form>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
+                <p class="eyebrow mb-1">Directory</p>
+                <h3 class="mb-0">Search students</h3>
+            </div>
+        </div>
+        <form method="GET" class="search-row">
+            <input type="text" class="form-control" name="q" value="{{ query }}" placeholder="Search by name, admission number, class, stream">
+            <button class="btn btn-outline-dark" type="submit">Search</button>
+        </form>
+        <div class="student-list">
+            {% for student in student_list %}
+            <a href="{{ url_for('main.student_profile', student_id=student.id) }}" class="student-list-card">
+                <div>
+                    <strong>{{ student.full_name }}</strong>
+                    <small>{{ student.admission_number }} | {{ student.portal_student_id }} | {{ student.class_name }} {{ student.stream }}</small>
+                </div>
+                <span>{{ student.school_email }}</span>
+            </a>
+            {% else %}
+            <p class="muted mb-0">No students matched the current search.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}
