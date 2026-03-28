@@ -102,6 +102,12 @@ class SubjectForm(FlaskForm):
             raise ValidationError("That subject code already exists.")
 
 
+class StudentSubjectForm(FlaskForm):
+    student_id = SelectField("Student", coerce=int, choices=[], validators=[DataRequired()])
+    subject_id = SelectField("Subject", coerce=int, choices=[], validators=[DataRequired()])
+    submit = SubmitField("Assign subject")
+
+
 class ResultForm(FlaskForm):
     student_id = SelectField("Student", coerce=int, choices=[], validators=[DataRequired()])
     subject_id = SelectField("Subject", coerce=int, choices=[], validators=[DataRequired()])

@@ -5,7 +5,7 @@ from decimal import Decimal
 from sqlalchemy import inspect, text
 
 from .extensions import db
-from .models import Achievement, Activity, FeePayment, FeeStructure, FinanceReport, HealthRecord, Message, ParentComment, ParentStudentLink, Result, Student, Subject, User
+from .models import Achievement, Activity, FeePayment, FeeStructure, FinanceReport, HealthRecord, Message, ParentComment, ParentStudentLink, Result, Student, StudentSubject, Subject, User
 
 
 GRADE_RULES = [
@@ -162,6 +162,14 @@ def ensure_schema_updates():
             for student in students:
                 student.portal_student_id = generate_student_portal_id(student.admission_number)
 
+    if "student_subjects" in inspector.get_table_names():
+        existing_pairs = {(item.student_id, item.subject_id) for item in StudentSubject.query.all()}
+        for result in Result.query.all():
+            pair = (result.student_id, result.subject_id)
+            if pair not in existing_pairs:
+                db.session.add(StudentSubject(student_id=result.student_id, subject_id=result.subject_id))
+                existing_pairs.add(pair)
+
     db.session.commit()
 
 
@@ -295,6 +303,14 @@ def seed_demo_data():
         Result(student_id=student.id, subject_id=subjects[3].id, term="Term 2", academic_year="2026", cat_score=26, exam_score=31, created_by_id=teacher.id),
     ]
     db.session.add_all(results)
+    db.session.add_all(
+        [
+            StudentSubject(student_id=student.id, subject_id=subjects[0].id),
+            StudentSubject(student_id=student.id, subject_id=subjects[1].id),
+            StudentSubject(student_id=student.id, subject_id=subjects[2].id),
+            StudentSubject(student_id=student.id, subject_id=subjects[3].id),
+        ]
+    )
 
     db.session.add_all(
         [

@@ -19,6 +19,34 @@
     </article>
 
     <article class="glass-card">
+        <p class="eyebrow">Student Subjects</p>
+        <h3>Assign subjects being undertaken</h3>
+        <form method="POST" novalidate class="form-stack">
+            {{ student_subject_form.hidden_tag() }}
+            <div class="form-grid">
+                <div>{{ student_subject_form.student_id.label(class="form-label") }}{{ student_subject_form.student_id(class="form-select") }}</div>
+                <div>{{ student_subject_form.subject_id.label(class="form-label") }}{{ student_subject_form.subject_id(class="form-select") }}</div>
+            </div>
+            {{ student_subject_form.submit(class="btn btn-primary") }}
+        </form>
+        <div class="mini-list mt-4">
+            {% for item in assigned_subjects %}
+            <div class="mini-item">
+                <div>
+                    <strong>{{ item.student.full_name }}</strong>
+                    <small>{{ item.student.class_name }} {{ item.student.stream }}</small>
+                </div>
+                <div class="score-chip">{{ item.subject.code }} | {{ item.subject.name }}</div>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No student-subject assignments yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="two-column mt-4">
+    <article class="glass-card">
         <p class="eyebrow">Results</p>
         <h3>Record marks</h3>
         <form method="POST" novalidate class="form-stack">
@@ -34,9 +62,6 @@
             {{ result_form.submit(class="btn btn-primary") }}
         </form>
     </article>
-</section>
-
-<section class="two-column mt-4">
     <article class="glass-card">
         <p class="eyebrow">Activities</p>
         <h3>Add co-curricular progress</h3>

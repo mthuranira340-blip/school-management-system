@@ -73,6 +73,28 @@
     <article class="glass-card">
         <div class="section-head">
             <div>
+                <p class="eyebrow mb-1">Subjects Undertaken</p>
+                <h4 class="mb-0">Assigned learning areas</h4>
+            </div>
+        </div>
+        <div class="mini-list">
+            {% for item in student.student_subjects %}
+            <div class="mini-item">
+                <div>
+                    <strong>{{ item.subject.name }}</strong>
+                    <small>{{ item.subject.code }}</small>
+                </div>
+                <div class="score-chip">Assigned</div>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No subjects have been assigned yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="glass-card">
+        <div class="section-head">
+            <div>
                 <p class="eyebrow mb-1">Fees</p>
                 <h4 class="mb-0">Finance summary</h4>
             </div>

@@ -22,6 +22,7 @@ from ..forms import (
     PaymentForm,
     ResultForm,
     StudentForm,
+    StudentSubjectForm,
     SubjectForm,
 )
 from ..models import (
@@ -36,6 +37,7 @@ from ..models import (
     ParentStudentLink,
     Result,
     Student,
+    StudentSubject,
     Subject,
     User,
 )
@@ -286,11 +288,13 @@ def student_profile(student_id):
 def academics():
     require_roles("admin", "teacher")
     subject_form = SubjectForm(prefix="subject")
+    student_subject_form = StudentSubjectForm(prefix="student_subject")
     result_form = ResultForm(prefix="result")
     activity_form = ActivityForm(prefix="activity")
     achievement_form = AchievementForm(prefix="achievement")
 
-    populate_student_choices(result_form, activity_form, achievement_form)
+    populate_student_choices(student_subject_form, result_form, activity_form, achievement_form)
+    populate_subject_choices(student_subject_form)
     populate_subject_choices(result_form)
 
     if subject_form.submit.data and subject_form.validate_on_submit():
@@ -300,7 +304,36 @@ def academics():
         flash("Subject saved successfully.", "success")
         return redirect(url_for("main.academics"))
 
+    if student_subject_form.submit.data and student_subject_form.validate_on_submit():
+        existing_link = StudentSubject.query.filter_by(
+            student_id=student_subject_form.student_id.data,
+            subject_id=student_subject_form.subject_id.data,
+        ).first()
+        if existing_link:
+            flash("That subject is already assigned to the student.", "info")
+        else:
+            db.session.add(
+                StudentSubject(
+                    student_id=student_subject_form.student_id.data,
+                    subject_id=student_subject_form.subject_id.data,
+                )
+            )
+            db.session.commit()
+            flash("Subject assigned to the student successfully.", "success")
+        return redirect(url_for("main.academics"))
+
     if result_form.submit.data and result_form.validate_on_submit():
+        enrolled_subject = StudentSubject.query.filter_by(
+            student_id=result_form.student_id.data,
+            subject_id=result_form.subject_id.data,
+        ).first()
+        if not enrolled_subject:
+            db.session.add(
+                StudentSubject(
+                    student_id=result_form.student_id.data,
+                    subject_id=result_form.subject_id.data,
+                )
+            )
         result = Result(
             student_id=result_form.student_id.data,
             subject_id=result_form.subject_id.data,
@@ -344,17 +377,20 @@ def academics():
 
     result_rows = [result_payload(entry) for entry in Result.query.order_by(Result.created_at.desc()).limit(12).all()]
     subjects = Subject.query.order_by(Subject.name.asc()).all()
+    assigned_subjects = StudentSubject.query.order_by(StudentSubject.assigned_at.desc()).limit(12).all()
     recent_activities = Activity.query.order_by(Activity.created_at.desc()).limit(8).all()
     recent_achievements = Achievement.query.order_by(Achievement.achievement_date.desc()).limit(8).all()
 
     return render_template(
         "academics.html",
         subject_form=subject_form,
+        student_subject_form=student_subject_form,
         result_form=result_form,
         activity_form=activity_form,
         achievement_form=achievement_form,
         result_rows=result_rows,
         subjects=subjects,
+        assigned_subjects=assigned_subjects,
         recent_activities=recent_activities,
         recent_achievements=recent_achievements,
     )

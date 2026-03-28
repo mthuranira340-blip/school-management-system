@@ -120,6 +120,18 @@ class Subject(db.Model):
     results = db.relationship("Result", backref="subject", lazy=True, cascade="all, delete-orphan")
 
 
+class StudentSubject(db.Model):
+    __tablename__ = "student_subjects"
+
+    id = db.Column(db.Integer, primary_key=True)
+    student_id = db.Column(db.Integer, db.ForeignKey("students.id"), nullable=False)
+    subject_id = db.Column(db.Integer, db.ForeignKey("subjects.id"), nullable=False)
+    assigned_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    student = db.relationship("Student", backref=db.backref("student_subjects", lazy=True, cascade="all, delete-orphan"))
+    subject = db.relationship("Subject", backref=db.backref("student_subjects", lazy=True, cascade="all, delete-orphan"))
+
+
 class Result(db.Model):
     __tablename__ = "results"
 
