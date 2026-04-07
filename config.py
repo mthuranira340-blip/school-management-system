@@ -27,3 +27,4 @@ class Config:
     PREFERRED_URL_SCHEME = "https"
     SESSION_COOKIE_SECURE = os.environ.get("FLASK_ENV") == "production"
     REMEMBER_COOKIE_SECURE = os.environ.get("FLASK_ENV") == "production"
+    SEED_DEMO_DATA = os.environ.get("SEED_DEMO_DATA", "False").lower() in {"1", "true", "yes"}

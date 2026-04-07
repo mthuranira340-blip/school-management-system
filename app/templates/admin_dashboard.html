@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block page_title %}Admin Dashboard{% endblock %}
+{% block content %}
+<section class="hero-card admin-hero">
+    <div>
+        <p class="eyebrow">System Governance</p>
+        <h3>Admin oversight</h3>
+        <p class="muted">Everything you need to monitor students, teachers, classes, and finance from one place.</p>
+    </div>
+    <div class="hero-badge">
+        <strong>{{ counts.students }}</strong>
+        <small>Students</small>
+    </div>
+</section>
+
+<section class="stats-grid admin-metrics">
+    <article class="glass-card stat-card">
+        <span>👩‍🏫</span>
+        <strong>{{ counts.teachers }}</strong>
+        <small>Teachers</small>
+    </article>
+    <article class="glass-card stat-card">
+        <span>📚</span>
+        <strong>{{ counts.students }}</strong>
+        <small>Classes</small>
+    </article>
+    <article class="glass-card stat-card">
+        <span>💹</span>
+        <strong>{{ analytics.average_grade }}</strong>
+        <small>Avg grade</small>
+    </article>
+    <article class="glass-card stat-card">
+        <span>💼</span>
+        <strong>{{ analytics.teachers }}</strong>
+        <small>Teacher teams</small>
+    </article>
+</section>
+
+<section class="content-grid">
+    <article class="glass-card admin-panel">
+        <p class="eyebrow">Performance analytics</p>
+        <div class="mini-list">
+            <div class="mini-item">
+                <strong>Top performers</strong>
+                <small>
+                    {% for entry in top_students %}
+                        {{ entry.student }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </small>
+            </div>
+            <div class="mini-item">
+                <strong>Needs attention</strong>
+                <small>
+                    {% for entry in low_students %}
+                        {{ entry.student }}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                </small>
+            </div>
+        </div>
+    </article>
+    <article class="glass-card admin-panel">
+        <p class="eyebrow">Teacher insights</p>
+        <div class="mini-list">
+            {% for teacher in teacher_stats %}
+            <div class="mini-item">
+                <div>
+                    <strong>{{ teacher.teacher }}</strong>
+                    <small>{{ teacher.subjects }} subjects</small>
+                </div>
+                <div class="score-chip">{{ teacher.results }} results</div>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="content-grid mt-4">
+    <article class="glass-card">
+        <p class="eyebrow">Activity log</p>
+        <div class="mini-list">
+            {% for activity in recent_activity %}
+            <div class="activity-tile">
+                <strong>{{ activity.category }} alert</strong>
+                <small>{{ activity.subject }} | {{ activity.body[:60] }}…</small>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+    <article class="glass-card">
+        <p class="eyebrow">Actions</p>
+        <div class="btn-grid">
+            <a class="btn btn-outline-dark">New report</a>
+            <a class="btn btn-outline-dark">Download insights</a>
+            <a class="btn btn-outline-dark">Send alert</a>
+        </div>
+    </article>
+</section>
+{% endblock %}

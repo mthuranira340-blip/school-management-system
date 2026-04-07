@@ -5,7 +5,7 @@ from decimal import Decimal
 from sqlalchemy import inspect, text
 
 from .extensions import db
-from .models import Achievement, Activity, FeePayment, FeeStructure, FinanceReport, HealthRecord, Message, ParentComment, ParentStudentLink, Result, Student, StudentSubject, Subject, User
+from .models import Achievement, Activity, FeePayment, FeeStructure, FinanceReport, HealthRecord, Message, ParentComment, ParentStudentLink, Result, SiteSetting, Student, StudentSubject, Subject, User
 
 
 GRADE_RULES = [
@@ -138,6 +138,84 @@ def dashboard_counts():
     }
 
 
+def get_school_name():
+    inspector = inspect(db.engine)
+    if "site_settings" not in inspector.get_table_names():
+        return "Greenfield High School"
+    setting = SiteSetting.query.first()
+    if setting and setting.school_name:
+        return setting.school_name
+    return "Greenfield High School"
+
+
+def set_school_name(name):
+    inspector = inspect(db.engine)
+    if "site_settings" not in inspector.get_table_names():
+        db.create_all()
+    setting = SiteSetting.query.first()
+    if not setting:
+        setting = SiteSetting(school_name=name)
+        db.session.add(setting)
+    else:
+        setting.school_name = name
+    db.session.commit()
+
+
+def get_current_wallpaper():
+    inspector = inspect(db.engine)
+    if "site_settings" not in inspector.get_table_names():
+        return "nature"
+    setting = SiteSetting.query.first()
+    if setting and setting.wallpaper:
+        return setting.wallpaper
+    return "nature"
+
+
+def set_wallpaper(name):
+    inspector = inspect(db.engine)
+    if "site_settings" not in inspector.get_table_names():
+        db.create_all()
+    setting = SiteSetting.query.first()
+    if not setting:
+        setting = SiteSetting(school_name="Greenfield High School", wallpaper=name)
+        db.session.add(setting)
+    else:
+        setting.wallpaper = name
+    db.session.commit()
+
+
+def wallpaper_options():
+    return [
+        ("nature", "Calm nature"),
+        ("glass", "Modern glass"),
+        ("dark", "Dark tech"),
+        ("minimal", "Minimal white"),
+    ]
+
+
+def get_school_name():
+    inspector = inspect(db.engine)
+    if "site_settings" not in inspector.get_table_names():
+        return "Greenfield High School"
+    setting = SiteSetting.query.first()
+    if setting and setting.school_name:
+        return setting.school_name
+    return "Greenfield High School"
+
+
+def set_school_name(name):
+    inspector = inspect(db.engine)
+    if "site_settings" not in inspector.get_table_names():
+        db.create_all()
+    setting = SiteSetting.query.first()
+    if not setting:
+        setting = SiteSetting(school_name=name)
+        db.session.add(setting)
+    else:
+        setting.school_name = name
+    db.session.commit()
+
+
 def ensure_schema_updates():
     inspector = inspect(db.engine)
 
@@ -169,6 +247,11 @@ def ensure_schema_updates():
             if pair not in existing_pairs:
                 db.session.add(StudentSubject(student_id=result.student_id, subject_id=result.subject_id))
                 existing_pairs.add(pair)
+
+    if "site_settings" in inspector.get_table_names():
+        site_columns = {column["name"] for column in inspector.get_columns("site_settings")}
+        if "wallpaper" not in site_columns:
+            db.session.execute(text("ALTER TABLE site_settings ADD COLUMN wallpaper VARCHAR(40) NOT NULL DEFAULT 'nature'"))
 
     db.session.commit()
 

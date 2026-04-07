@@ -199,3 +199,18 @@ class FinanceReportForm(FlaskForm):
     expected_amount = DecimalField("Expected amount", validators=[DataRequired(), NumberRange(min=0)], places=2)
     report_body = TextAreaField("Finance summary", validators=[DataRequired(), Length(min=10, max=3000)])
     submit = SubmitField("Send report to principal")
+
+
+class SchoolSettingsForm(FlaskForm):
+    school_name = StringField("School name", validators=[DataRequired(), Length(min=3, max=160)])
+    wallpaper = SelectField(
+        "Wallpaper style",
+        choices=[
+            ("nature", "Calm nature"),
+            ("glass", "Modern glass"),
+            ("dark", "Dark tech"),
+            ("minimal", "Minimal white"),
+        ],
+        validators=[DataRequired()],
+    )
+    submit = SubmitField("Save school settings")

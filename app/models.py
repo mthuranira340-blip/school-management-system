@@ -110,6 +110,14 @@ class Student(db.Model):
         return sorted(self.fee_structures, key=lambda item: (item.academic_year, item.term), reverse=True)[0]
 
 
+class SiteSetting(db.Model):
+    __tablename__ = "site_settings"
+
+    id = db.Column(db.Integer, primary_key=True)
+    school_name = db.Column(db.String(160), nullable=False, default="Greenfield High School")
+    wallpaper = db.Column(db.String(40), nullable=False, default="nature")
+
+
 class Subject(db.Model):
     __tablename__ = "subjects"
 

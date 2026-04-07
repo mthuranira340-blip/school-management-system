@@ -21,10 +21,29 @@ body {
     min-height: 100vh;
     font-family: "Manrope", sans-serif;
     color: var(--ink);
-    background:
-        radial-gradient(circle at top left, rgba(60, 168, 155, 0.18), transparent 28%),
-        radial-gradient(circle at right, rgba(240, 180, 76, 0.18), transparent 22%),
-        linear-gradient(180deg, #f7fafc 0%, #edf3f8 100%);
+    background: var(--body-bg, linear-gradient(180deg, #f7fafc 0%, #edf3f8 100%));
+    transition: background 0.35s ease;
+}
+
+body[data-wallpaper="nature"] {
+    --body-bg: linear-gradient(135deg, rgba(94, 182, 169, 0.35), rgba(135, 184, 229, 0.45)),
+        url("https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1600&q=80");
+    background-size: cover;
+    background-attachment: fixed;
+}
+
+body[data-wallpaper="glass"] {
+    --body-bg: linear-gradient(135deg, rgba(31, 66, 111, 0.95), rgba(35, 163, 175, 0.85)),
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.15), transparent 40%);
+}
+
+body[data-wallpaper="dark"] {
+    --body-bg: linear-gradient(135deg, #030b1b, #051025 60%, #001f2d 100%);
+    color: #f8fbff;
+}
+
+body[data-wallpaper="minimal"] {
+    --body-bg: linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%);
 }
 
 h1, h2, h3, h4, h5 {
@@ -140,6 +159,21 @@ h1, h2, h3, h4, h5 {
     padding: 1.4rem;
 }
 
+.nature-glass {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.75);
+    backdrop-filter: blur(22px);
+    box-shadow: 0 40px 70px rgba(14, 60, 44, 0.15);
+}
+
+.nature-panel .message-card,
+.nature-panel .mini-item,
+.nature-panel .activity-tile,
+.nature-panel .achievement-tile {
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(14, 60, 44, 0.15);
+}
+
 .hero-card {
     background: linear-gradient(135deg, rgba(31, 76, 115, 0.96), rgba(60, 168, 155, 0.92));
     color: #ffffff;
@@ -149,6 +183,33 @@ h1, h2, h3, h4, h5 {
     gap: 1.5rem;
     align-items: center;
     margin-bottom: 1.4rem;
+}
+
+.admin-hero {
+    background: linear-gradient(135deg, #0f4c75, #1f7a8c);
+}
+
+.teacher-hero {
+    background: linear-gradient(135deg, #1f6f3b, #4aa96c);
+}
+
+.admin-panel {
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.teacher-panel {
+    border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.admin-metrics .stat-card strong,
+.admin-metrics .stat-card small {
+    color: #ffffff;
+}
+
+.btn-grid {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .hero-card .eyebrow,

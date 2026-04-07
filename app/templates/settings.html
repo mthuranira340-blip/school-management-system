@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block page_title %}Settings{% endblock %}
+{% block content %}
+<section class="two-column">
+    <article class="glass-card">
+        <p class="eyebrow">School Identity</p>
+        <h3>Update the school name</h3>
+        <form method="POST" class="form-stack" novalidate>
+            {{ form.hidden_tag() }}
+            <div>{{ form.school_name.label(class="form-label") }}{{ form.school_name(class="form-control") }}</div>
+            {{ form.submit(class="btn btn-primary") }}
+        </form>
+    </article>
+    <article class="glass-card">
+        <p class="eyebrow">Preview</p>
+        <h3>Current name</h3>
+        <div class="message-card">
+            <strong>{{ school_name }}</strong>
+            <small>This appears across the dashboard and generated clearance letters.</small>
+        </div>
+    </article>
+</section>
+{% endblock %}

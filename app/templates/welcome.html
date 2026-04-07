@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block page_title %}Welcome{% endblock %}
+{% block content %}
+<section class="hero-card">
+    <div>
+        <p class="eyebrow">Welcome</p>
+        <h3>Welcome to {{ school_name }}</h3>
+        <p class="muted">Manage students, parents, academics, finances, health records, and transfers from one responsive dashboard.</p>
+    </div>
+    <div>
+        <p class="muted mb-1">Use the sidebar to head into each department.</p>
+        {% if current_user.is_authenticated %}
+        <a class="btn btn-primary" href="{{ url_for('main.dashboard') }}">Enter Dashboard</a>
+        {% else %}
+        <a class="btn btn-primary" href="{{ url_for('auth.login') }}">Sign In</a>
+        {% endif %}
+    </div>
+</section>
+<section class="content-grid mt-4">
+    <article class="glass-card">
+        <p class="eyebrow">Admin</p>
+        <h4>Full oversight</h4>
+        <p>Approve transfers, share finance reports, and keep the school identity consistent.</p>
+    </article>
+    <article class="glass-card">
+        <p class="eyebrow">Teacher</p>
+        <h4>Academic tracker</h4>
+        <p>Assign subjects, record results, and launch transfer clearances with a single letter.</p>
+    </article>
+    <article class="glass-card">
+        <p class="eyebrow">Parent</p>
+        <h4>Connected insights</h4>
+        <p>See grades, fees, activities, achievements, and health notes linked to your child.</p>
+    </article>
+    <article class="glass-card">
+        <p class="eyebrow">Finance</p>
+        <h4>Transparent fees</h4>
+        <p>Submit reports to the principal and alert teachers when collections are shared.</p>
+    </article>
+</section>
+{% endblock %}

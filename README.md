@@ -114,7 +114,9 @@ If the system Python launcher is unavailable on your machine, this project also 
 ## Notes
 
 - If MySQL is not configured, the app automatically runs with a local SQLite demo database.
-- The app seeds demo users plus sample student, health, comments, finance, academic, fee, and messaging data on first launch.
+- The app no longer seeds demo users by default. Run `python scripts/reset_accounts.py` to drop and recreate the schema, then register whatever accounts you need yourself.
+- If you still see schema errors after updating the code, rerun the reset script so the new `wallpaper` column is created.
+- Set `SEED_DEMO_DATA=true` before starting the app if you ever want the demo accounts automatically seeded again.
 - School emails are auto-generated in the format `identifier@greenfieldhigh.edu`.
 - The `.python312` folder can act as a self-contained local Python environment when the global Python installation is broken or missing.
 

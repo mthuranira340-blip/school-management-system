@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block page_title %}Teacher Dashboard{% endblock %}
+{% block content %}
+<section class="hero-card teacher-hero">
+    <div>
+        <p class="eyebrow">Academic Operations</p>
+        <h3>Teacher focus</h3>
+        <p class="muted">Stay on top of registered classes, exams, and student performance.</p>
+    </div>
+    <div>
+        <a class="btn btn-outline-light" href="{{ url_for('main.academics') }}">Open academic toolkit</a>
+    </div>
+</section>
+
+<section class="content-grid">
+    <article class="glass-card teacher-panel">
+        <p class="eyebrow">Assigned Classes</p>
+        <div class="chip-row">
+            {% for cls in classes %}
+            <span class="soft-badge">{{ cls }}</span>
+            {% else %}
+            <p class="muted mb-0">No classes assigned yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+    <article class="glass-card teacher-panel">
+        <p class="eyebrow">Exam management</p>
+        <div class="mini-list">
+            {% for exam in exam_insights %}
+            <div class="mini-item">
+                <div>
+                    <strong>{{ exam.student }}</strong>
+                    <small>{{ exam.subject }}</small>
+                </div>
+                <div class="score-chip">{{ exam.score }} | {{ exam.grade }}</div>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No exams recorded yet.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+
+<section class="content-grid mt-4">
+    <article class="glass-card">
+        <p class="eyebrow">Attendance</p>
+        <div class="mini-list">
+            {% for note in attendance_notes %}
+            <div class="activity-tile">
+                <strong>{{ note.student }}</strong>
+                <small>{{ note.status }}</small>
+            </div>
+            {% endfor %}
+        </div>
+    </article>
+    <article class="glass-card">
+        <p class="eyebrow">Admin notifications</p>
+        <div class="mini-list">
+            {% for note in notifications %}
+            <div class="message-card">
+                <strong>{{ note.category }}</strong>
+                <small>{{ note.subject }}</small>
+            </div>
+            {% else %}
+            <p class="muted mb-0">No admin notices.</p>
+            {% endfor %}
+        </div>
+    </article>
+</section>
+{% endblock %}

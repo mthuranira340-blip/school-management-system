@@ -1,7 +1,7 @@
 from io import BytesIO
 from datetime import datetime
 
-from flask import Blueprint, abort, flash, make_response, redirect, render_template, request, url_for
+from flask import Blueprint, abort, flash, make_response, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
@@ -21,6 +21,7 @@ from ..forms import (
     ParentCommentForm,
     PaymentForm,
     ResultForm,
+    SchoolSettingsForm,
     StudentForm,
     StudentSubjectForm,
     SubjectForm,
@@ -41,7 +42,22 @@ from ..models import (
     Subject,
     User,
 )
-from ..services import dashboard_counts, fee_snapshot, generate_school_email, generate_student_portal_id, overall_performance, performance_trend, result_payload, student_result_cards, subject_breakdown
+from ..services import (
+    dashboard_counts,
+    fee_snapshot,
+    generate_school_email,
+    generate_student_portal_id,
+    get_current_wallpaper,
+    get_school_name,
+    overall_performance,
+    performance_trend,
+    result_payload,
+    set_school_name,
+    set_wallpaper,
+    student_result_cards,
+    subject_breakdown,
+    wallpaper_options,
+)
 
 
 main_bp = Blueprint("main", __name__)
@@ -141,6 +157,10 @@ def index():
 @main_bp.route("/dashboard")
 @login_required
 def dashboard():
+    if current_user.role == "admin":
+        return redirect(url_for("main.admin_dashboard"))
+    if current_user.role == "teacher":
+        return redirect(url_for("main.teacher_dashboard"))
     student = selected_student()
     students = visible_students()
     counts = dashboard_counts()
@@ -196,6 +216,100 @@ def dashboard():
         finance_reports=finance_reports,
         parent_contacts=parent_contacts,
         recent_messages=recent_messages,
+    )
+
+
+@main_bp.route("/settings", methods=["GET", "POST"])
+@login_required
+def settings():
+    require_roles("admin")
+    form = SchoolSettingsForm()
+    form.wallpaper.choices = wallpaper_options()
+    if form.validate_on_submit():
+        set_school_name(form.school_name.data.strip())
+        set_wallpaper(form.wallpaper.data)
+        flash("School settings updated successfully.", "success")
+        return redirect(url_for("main.settings"))
+    form.school_name.data = form.school_name.data or get_school_name()
+    form.wallpaper.data = form.wallpaper.data or get_current_wallpaper()
+    return render_template("settings.html", form=form)
+
+
+@main_bp.route("/welcome")
+def welcome():
+    return render_template("welcome.html", school_name=get_school_name())
+
+
+@main_bp.route("/admin/dashboard")
+@login_required
+def admin_dashboard():
+    require_roles("admin")
+    counts = dashboard_counts()
+    recent_activity = Message.query.order_by(Message.sent_at.desc()).limit(5).all()
+    all_students = Student.query.all()
+    performance_summary = []
+    for student in all_students:
+        cards = student_result_cards(student)
+        avg = round(sum(card["total_score"] for card in cards) / len(cards), 1) if cards else 0
+        performance_summary.append({"student": student.full_name, "average": avg})
+    performance_summary.sort(key=lambda item: item["average"], reverse=True)
+
+    top_students = performance_summary[:5]
+    low_students = sorted(performance_summary, key=lambda item: item["average"])[:5]
+
+    teacher_stats = []
+    for teacher in User.query.filter_by(role="teacher").all():
+        total_results = Result.query.filter_by(created_by_id=teacher.id).count()
+        teacher_stats.append(
+            {
+                "teacher": teacher.full_name,
+                "results": total_results,
+                "subjects": len({result.subject.code for result in Result.query.filter_by(created_by_id=teacher.id)}),
+            }
+        )
+    analytics = {
+        "students": len(all_students),
+        "teachers": len(teacher_stats),
+        "average_grade": round(sum(int(item["average"]) for item in performance_summary) / len(performance_summary), 1) if performance_summary else 0,
+    }
+
+    return render_template(
+        "admin_dashboard.html",
+        counts=counts,
+        top_students=top_students,
+        low_students=low_students,
+        teacher_stats=teacher_stats,
+        analytics=analytics,
+        recent_activity=recent_activity,
+    )
+
+
+@main_bp.route("/teacher/dashboard")
+@login_required
+def teacher_dashboard():
+    require_roles("teacher")
+    assigned_results = Result.query.filter_by(created_by_id=current_user.id).order_by(Result.created_at.desc()).limit(12).all()
+    assigned_students = {result.student for result in assigned_results}
+    classes = sorted({student.class_name for student in assigned_students})
+    exam_insights = []
+    for result in assigned_results:
+        exam_insights.append(
+            {
+                "student": result.student.full_name,
+                "subject": result.subject.name,
+                "score": result.total_score,
+                "grade": result_payload(result)["grade"],
+            }
+        )
+    attendance_notes = [{"student": student.full_name, "status": "Present"} for student in assigned_students][:6]
+    notifications = Message.query.filter_by(receiver_id=current_user.id).order_by(Message.sent_at.desc()).limit(4).all()
+
+    return render_template(
+        "teacher_dashboard.html",
+        classes=classes,
+        exam_insights=exam_insights,
+        attendance_notes=attendance_notes,
+        notifications=notifications,
     )
 
 
